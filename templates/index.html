@@ -452,7 +452,7 @@ function isNew(deal) {
 async function loadDeals() {
   try {
     // Default: fetch interesting-only to reduce payload
-    const r = await fetch('/api/deals?interesting_only=true&limit=500');
+    const r = await fetch('/api/deals?limit=2000');
     if (!r.ok) throw new Error(`HTTP ${r.status}`);
     const data = await r.json();
     allDeals = data.deals || [];

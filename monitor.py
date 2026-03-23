@@ -725,6 +725,10 @@ def _extract_olx_html(soup: BeautifulSoup, market_key: str) -> list[dict]:
 IDEALISTA_URLS = {
     "barcelona": "https://www.idealista.com/venta-viviendas/barcelona-barcelona/",
     "lizbona": "https://www.idealista.pt/comprar-casas/lisboa/",
+    # Spain
+    "alicante": "https://www.idealista.com/venta-viviendas/alicante-alicante/",
+    "malaga":   "https://www.idealista.com/venta-viviendas/malaga-malaga/",
+    "valencia": "https://www.idealista.com/venta-viviendas/valencia-valencia/",
 }
 
 
@@ -807,6 +811,131 @@ def scrape_idealista(market_key: str) -> list[dict]:
     except Exception as e:
         log.error(f"[Idealista] Błąd: {e}")
 
+    return deals
+
+
+# ---------------------------------------------------------------------------
+# Imobiliare.ro scraper (Bucharest)
+# ---------------------------------------------------------------------------
+IMOBILIARE_URLS = {
+    "bucharest": "https://www.imobiliare.ro/vanzare-apartamente/bucuresti?pagina=1",
+}
+
+def scrape_imobiliare(market_key: str) -> list[dict]:
+    """Scrape imobiliare.ro for Romanian market (Bucharest)."""
+    base_url = IMOBILIARE_URLS.get(market_key)
+    if not base_url:
+        log.info(f"[Imobiliare] Brak URL dla {market_key}")
+        return []
+
+    deals = []
+    log.info(f"[Imobiliare] {market_key}: {base_url}")
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/131.0.0.0 Safari/537.36",
+        "Accept-Language": "ro-RO,ro;q=0.9,en;q=0.8",
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+    }
+    try:
+        resp = SESSION.get(base_url, headers=headers, timeout=30)
+        if resp.status_code != 200:
+            log.warning(f"  Imobiliare: HTTP {resp.status_code}")
+            return deals
+        soup = BeautifulSoup(resp.text, "html.parser")
+        # imobiliare.ro listing cards
+        cards = soup.select("div.ant-col.col-lg-6, li.list-items-container article, div[class*='listing-item']")
+        if not cards:
+            cards = soup.select("article")
+        log.info(f"  Cards found: {len(cards)}")
+        for card in cards[:20]:
+            try:
+                title_el = card.select_one("a[class*='title'], a.title, h2 a, h3 a")
+                title = title_el.get_text(strip=True) if title_el else ""
+                href = title_el.get("href", "") if title_el else ""
+                if href and not href.startswith("http"):
+                    href = "https://www.imobiliare.ro" + href
+                price_el = card.select_one("[class*='price'], .pret, span[class*='Price']")
+                price = _parse_price(price_el.get_text(strip=True)) if price_el else 0
+                area_el = card.select_one("[class*='area'], [class*='suprafata']")
+                area = 0
+                if area_el:
+                    m = re.search(r'(\d+)\s*m', area_el.get_text())
+                    if m:
+                        area = float(m.group(1))
+                if price > 0 and area > 0:
+                    price_m2 = round(price / area, 0)
+                    deal = make_deal(
+                        title=title or "Apartament București",
+                        price=price, area=area, price_m2=price_m2,
+                        location="București", url=href,
+                        source="imobiliare", market=market_key,
+                    )
+                    deals.append(deal)
+            except Exception:
+                continue
+        log.info(f"  -> {len(deals)} ofert")
+    except Exception as e:
+        log.error(f"[Imobiliare] Błąd: {e}")
+    return deals
+
+
+# ---------------------------------------------------------------------------
+# xe.gr scraper (Athens)
+# ---------------------------------------------------------------------------
+XE_GR_URLS = {
+    "athens": "https://www.xe.gr/property/results?transaction_name=buy&item_type=re_apartment&geo_place_ids%5B%5D=GEO.3&order_by=-modified",
+}
+
+def scrape_xe_gr(market_key: str) -> list[dict]:
+    """Scrape xe.gr for Greek market (Athens)."""
+    base_url = XE_GR_URLS.get(market_key)
+    if not base_url:
+        log.info(f"[xe.gr] Brak URL dla {market_key}")
+        return []
+
+    deals = []
+    log.info(f"[xe.gr] {market_key}: {base_url}")
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/131.0.0.0 Safari/537.36",
+        "Accept-Language": "el-GR,el;q=0.9,en;q=0.8",
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+    }
+    try:
+        resp = SESSION.get(base_url, headers=headers, timeout=30)
+        if resp.status_code != 200:
+            log.warning(f"  xe.gr: HTTP {resp.status_code}")
+            return deals
+        soup = BeautifulSoup(resp.text, "html.parser")
+        cards = soup.select("article, div[class*='listing'], li[class*='result']")
+        log.info(f"  Cards found: {len(cards)}")
+        for card in cards[:20]:
+            try:
+                title_el = card.select_one("a[class*='title'], h2 a, h3 a, a")
+                title = title_el.get_text(strip=True) if title_el else ""
+                href = title_el.get("href", "") if title_el else ""
+                if href and not href.startswith("http"):
+                    href = "https://www.xe.gr" + href
+                price_el = card.select_one("[class*='price'], [class*='Price']")
+                price = _parse_price(price_el.get_text(strip=True)) if price_el else 0
+                area = 0
+                for el in card.select("span, div"):
+                    m = re.search(r'(\d+)\s*τ\.μ|(\d+)\s*m[²2]', el.get_text())
+                    if m:
+                        area = float(m.group(1) or m.group(2))
+                        break
+                if price > 0:
+                    price_m2 = round(price / area, 0) if area > 0 else 0
+                    deal = make_deal(
+                        title=title or "Apartment Athens",
+                        price=price, area=area, price_m2=price_m2,
+                        location="Athens", url=href,
+                        source="xe_gr", market=market_key,
+                    )
+                    deals.append(deal)
+            except Exception:
+                continue
+        log.info(f"  -> {len(deals)} ofert")
+    except Exception as e:
+        log.error(f"[xe.gr] Błąd: {e}")
     return deals
 
 
@@ -1082,8 +1211,12 @@ def main():
                     deals = scrape_otodom(market_key)
                 elif source == "olx":
                     deals = scrape_olx(market_key)
-                elif source == "idealista":
+                elif source in ("idealista", "idealista_es", "idealista_pt"):
                     deals = scrape_idealista(market_key)
+                elif source == "imobiliare":
+                    deals = scrape_imobiliare(market_key)
+                elif source == "xe_gr":
+                    deals = scrape_xe_gr(market_key)
                 else:
                     log.warning(f"Nieznane źródło: {source}")
                     continue

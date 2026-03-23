@@ -178,10 +178,11 @@ def api_stats():
     })
 
 
-if __name__ == "__main__":
-    # Start scheduler in background
-    sched = threading.Thread(target=schedule_loop, daemon=True)
-    sched.start()
+# Start scheduler regardless of how the app is launched.
+# Must be at module level — gunicorn imports app without running __main__.
+_sched = threading.Thread(target=schedule_loop, daemon=True)
+_sched.start()
 
+if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port, debug=False)

@@ -188,9 +188,7 @@
       "label": "Ateny 🇬🇷",
       "max_price_m2": 3000,
       "currency": "EUR",
-      "sources": [
-        "xe_gr"
-      ],
+      "sources": [],
       "city_filter": [
         "Athens",
         "Ateny",
@@ -207,7 +205,7 @@
       "max_price_m2": 2000,
       "currency": "EUR",
       "sources": [
-        "imobiliare"
+        "storia_ro"
       ],
       "city_filter": [
         "Bucharest",
@@ -270,7 +268,9 @@
       "label": "Sofia BG",
       "max_price_m2": 3700,
       "currency": "EUR",
-      "sources": [],
+      "sources": [
+        "imot_bg"
+      ],
       "city_filter": [
         "Sofia"
       ],

@@ -815,128 +815,147 @@ def scrape_idealista(market_key: str) -> list[dict]:
 
 
 # ---------------------------------------------------------------------------
-# Imobiliare.ro scraper (Bucharest)
+# storia.ro scraper (Bucharest) — uses __NEXT_DATA__ like Otodom
 # ---------------------------------------------------------------------------
-IMOBILIARE_URLS = {
-    "bucharest": "https://www.imobiliare.ro/vanzare-apartamente/bucuresti?pagina=1",
+STORIA_URLS = {
+    "bucharest": "https://www.storia.ro/ro/rezultate/vanzare/apartament/bucuresti",
 }
 
-def scrape_imobiliare(market_key: str) -> list[dict]:
-    """Scrape imobiliare.ro for Romanian market (Bucharest)."""
-    base_url = IMOBILIARE_URLS.get(market_key)
+def scrape_storia(market_key: str) -> list[dict]:
+    """Scrape storia.ro via __NEXT_DATA__ JSON (same structure as Otodom/Next.js)."""
+    base_url = STORIA_URLS.get(market_key)
     if not base_url:
-        log.info(f"[Imobiliare] Brak URL dla {market_key}")
         return []
-
     deals = []
-    log.info(f"[Imobiliare] {market_key}: {base_url}")
     headers = {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/131.0.0.0 Safari/537.36",
         "Accept-Language": "ro-RO,ro;q=0.9,en;q=0.8",
         "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
     }
-    try:
-        resp = SESSION.get(base_url, headers=headers, timeout=30)
+    for page in range(1, 3):
+        url = f"{base_url}?page={page}" if page > 1 else base_url
+        log.info(f"[Storia] {market_key} page {page}: {url}")
+        resp = SESSION.get(url, headers=headers, timeout=30)
         if resp.status_code != 200:
-            log.warning(f"  Imobiliare: HTTP {resp.status_code}")
-            return deals
+            log.warning(f"  Storia HTTP {resp.status_code}")
+            break
         soup = BeautifulSoup(resp.text, "html.parser")
-        # imobiliare.ro listing cards
-        cards = soup.select("div.ant-col.col-lg-6, li.list-items-container article, div[class*='listing-item']")
-        if not cards:
-            cards = soup.select("article")
-        log.info(f"  Cards found: {len(cards)}")
-        for card in cards[:20]:
-            try:
-                title_el = card.select_one("a[class*='title'], a.title, h2 a, h3 a")
-                title = title_el.get_text(strip=True) if title_el else ""
-                href = title_el.get("href", "") if title_el else ""
-                if href and not href.startswith("http"):
-                    href = "https://www.imobiliare.ro" + href
-                price_el = card.select_one("[class*='price'], .pret, span[class*='Price']")
-                price = _parse_price(price_el.get_text(strip=True)) if price_el else 0
-                area_el = card.select_one("[class*='area'], [class*='suprafata']")
-                area = 0
-                if area_el:
-                    m = re.search(r'(\d+)\s*m', area_el.get_text())
-                    if m:
-                        area = float(m.group(1))
-                if price > 0 and area > 0:
-                    price_m2 = round(price / area, 0)
+        tag = soup.find("script", {"id": "__NEXT_DATA__"})
+        if not tag:
+            log.warning("  Storia: brak __NEXT_DATA__")
+            break
+        try:
+            data = json.loads(tag.string)
+            items = data.get("props", {}).get("pageProps", {}).get("data", {}).get("searchAds", {}).get("items", [])
+            log.info(f"  Storia items: {len(items)}")
+            for item in items:
+                try:
+                    price_obj = item.get("totalPrice") or {}
+                    price = float(price_obj.get("value", 0) or 0)
+                    area = float(item.get("areaInSquareMeters") or 0)
+                    if price <= 0:
+                        continue
+                    slug = item.get("slug", "")
+                    url_deal = f"https://www.storia.ro/ro/oferta/{slug}" if slug else ""
+                    title = item.get("title") or item.get("estate") or "Apartament București"
+                    city_obj = (item.get("location") or {}).get("address", {}).get("city", {})
+                    city = city_obj.get("name", "București") if isinstance(city_obj, dict) else "București"
+                    price_m2 = round(price / area, 0) if area > 0 else 0
+                    img_list = item.get("images") or []
+                    image_url = img_list[0].get("medium") if img_list and isinstance(img_list[0], dict) else ""
                     deal = make_deal(
-                        title=title or "Apartament București",
-                        price=price, area=area, price_m2=price_m2,
-                        location="București", url=href,
-                        source="imobiliare", market=market_key,
+                        title=title, price=price, area=area, price_m2=price_m2,
+                        location=city, url=url_deal, source="storia",
+                        market=market_key, image_url=image_url or "",
                     )
                     deals.append(deal)
-            except Exception:
-                continue
-        log.info(f"  -> {len(deals)} ofert")
-    except Exception as e:
-        log.error(f"[Imobiliare] Błąd: {e}")
+                except Exception:
+                    continue
+        except Exception as e:
+            log.error(f"  Storia parse error: {e}")
+        polite_delay()
+    log.info(f"[Storia] -> {len(deals)} ofert")
     return deals
 
 
 # ---------------------------------------------------------------------------
-# xe.gr scraper (Athens)
+# imot.bg scraper (Sofia/Bulgaria)
 # ---------------------------------------------------------------------------
-XE_GR_URLS = {
-    "athens": "https://www.xe.gr/property/results?transaction_name=buy&item_type=re_apartment&geo_place_ids%5B%5D=GEO.3&order_by=-modified",
+IMOT_URLS = {
+    "sofia": "https://www.imot.bg/pcgi/imot.cgi?act=11&slink=bycghp&f1=1&f2=Sofia",
 }
 
-def scrape_xe_gr(market_key: str) -> list[dict]:
-    """Scrape xe.gr for Greek market (Athens)."""
-    base_url = XE_GR_URLS.get(market_key)
+def scrape_imot(market_key: str) -> list[dict]:
+    """Scrape imot.bg for Bulgarian market. Uses windows-1251 encoding."""
+    base_url = IMOT_URLS.get(market_key)
     if not base_url:
-        log.info(f"[xe.gr] Brak URL dla {market_key}")
         return []
-
     deals = []
-    log.info(f"[xe.gr] {market_key}: {base_url}")
     headers = {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/131.0.0.0 Safari/537.36",
-        "Accept-Language": "el-GR,el;q=0.9,en;q=0.8",
+        "Accept-Language": "bg-BG,bg;q=0.9,en;q=0.8",
         "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
     }
+    log.info(f"[Imot.bg] {market_key}: {base_url}")
     try:
         resp = SESSION.get(base_url, headers=headers, timeout=30)
         if resp.status_code != 200:
-            log.warning(f"  xe.gr: HTTP {resp.status_code}")
+            log.warning(f"  Imot HTTP {resp.status_code}")
             return deals
-        soup = BeautifulSoup(resp.text, "html.parser")
-        cards = soup.select("article, div[class*='listing'], li[class*='result']")
-        log.info(f"  Cards found: {len(cards)}")
-        for card in cards[:20]:
+        html = resp.content.decode("windows-1251", errors="replace")
+        soup = BeautifulSoup(html, "html.parser")
+        cards = soup.select("div.item")
+        if not cards:
+            cards = soup.select("table.tableListResult tr[class]")
+        log.info(f"  Imot cards: {len(cards)}")
+        for card in cards[:25]:
             try:
-                title_el = card.select_one("a[class*='title'], h2 a, h3 a, a")
-                title = title_el.get_text(strip=True) if title_el else ""
-                href = title_el.get("href", "") if title_el else ""
-                if href and not href.startswith("http"):
-                    href = "https://www.xe.gr" + href
-                price_el = card.select_one("[class*='price'], [class*='Price']")
-                price = _parse_price(price_el.get_text(strip=True)) if price_el else 0
+                link_el = card.select_one("div.zaglavie a, a.lnk1, h3 a, td a")
+                if not link_el:
+                    continue
+                title = link_el.get_text(strip=True)
+                href = link_el.get("href", "")
+                if href.startswith("//"):
+                    href = "https:" + href
+                elif href and not href.startswith("http"):
+                    href = "https://www.imot.bg" + href
+                price_el = card.select_one("div.price, .cena, strong")
+                price_text = price_el.get_text(strip=True) if price_el else ""
+                price = _parse_price(price_text)
                 area = 0
-                for el in card.select("span, div"):
-                    m = re.search(r'(\d+)\s*τ\.μ|(\d+)\s*m[²2]', el.get_text())
+                for el in card.select("span, div, td"):
+                    m = re.search(r'(\d+)\s*(?:кв\.м|m²|кв\.м\.)', el.get_text())
                     if m:
-                        area = float(m.group(1) or m.group(2))
+                        area = float(m.group(1))
                         break
-                if price > 0:
-                    price_m2 = round(price / area, 0) if area > 0 else 0
-                    deal = make_deal(
-                        title=title or "Apartment Athens",
-                        price=price, area=area, price_m2=price_m2,
-                        location="Athens", url=href,
-                        source="xe_gr", market=market_key,
-                    )
-                    deals.append(deal)
+                if price <= 0:
+                    continue
+                price_m2 = round(price / area, 0) if area > 0 else 0
+                deal = make_deal(
+                    title=title or "Апартамент София",
+                    price=price, area=area, price_m2=price_m2,
+                    location="Sofia", url=href,
+                    source="imot", market=market_key,
+                )
+                deals.append(deal)
             except Exception:
                 continue
-        log.info(f"  -> {len(deals)} ofert")
     except Exception as e:
-        log.error(f"[xe.gr] Błąd: {e}")
+        log.error(f"[Imot.bg] Błąd: {e}")
+    log.info(f"[Imot.bg] -> {len(deals)} ofert")
     return deals
+
+
+# ---------------------------------------------------------------------------
+# xe.gr / imobiliare stubs — blocked, kept for compatibility
+# ---------------------------------------------------------------------------
+def scrape_imobiliare(market_key):
+    log.info(f"[Imobiliare] Using storia.ro instead for {market_key}")
+    return scrape_storia(market_key)
+
+def scrape_xe_gr(market_key):
+    log.warning(f"[xe.gr] Zablokowane przez AWS WAF — pomijam {market_key}")
+    return []
 
 
 # ---------------------------------------------------------------------------
@@ -1213,8 +1232,10 @@ def main():
                     deals = scrape_olx(market_key)
                 elif source in ("idealista", "idealista_es", "idealista_pt"):
                     deals = scrape_idealista(market_key)
-                elif source == "imobiliare":
-                    deals = scrape_imobiliare(market_key)
+                elif source in ("imobiliare", "storia_ro"):
+                    deals = scrape_storia(market_key)
+                elif source == "imot_bg":
+                    deals = scrape_imot(market_key)
                 elif source == "xe_gr":
                     deals = scrape_xe_gr(market_key)
                 else:

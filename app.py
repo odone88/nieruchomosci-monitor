@@ -56,8 +56,8 @@ def schedule_loop():
     """Background scheduler — runs scraper every 6 hours.
     Waits 30 seconds on first start to avoid hammering on cold-start (Render free tier).
     """
-    log.info("Scheduler: waiting 30s before first run (cold-start guard)...")
-    time.sleep(30)
+    log.info("Scheduler: waiting 5s before first run...")
+    time.sleep(5)
     while True:
         log.info("Scheduler: running scraper...")
         run_scraper_bg()

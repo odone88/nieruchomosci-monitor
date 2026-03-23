@@ -449,15 +449,23 @@ function isNew(deal) {
   return (NOW - new Date(deal.found_at).getTime()) < H24;
 }
 
+let _loadRetry = 0;
+
 async function loadDeals() {
   try {
-    // Default: fetch interesting-only to reduce payload
     const r = await fetch('/api/deals?limit=2000');
     if (!r.ok) throw new Error(`HTTP ${r.status}`);
     const data = await r.json();
     allDeals = data.deals || [];
     markets = data.markets || {};
 
+    // No data yet — scraper still warming up after cold start
+    if (!data.timestamp && allDeals.length === 0) {
+      showWarmup();
+      return;
+    }
+
+    _loadRetry = 0;
     document.getElementById('last-update').textContent =
       data.timestamp ? '⏱ ' + new Date(data.timestamp).toLocaleString('pl') : 'Brak danych';
 
@@ -474,6 +482,23 @@ async function loadDeals() {
     if (skel) skel.remove();
     showError(e.message);
   }
+}
+
+function showWarmup() {
+  _loadRetry++;
+  const skel = document.getElementById('skeleton');
+  if (skel) skel.remove();
+  const eta = Math.max(0, 120 - _loadRetry * 15);
+  document.getElementById('results-count').textContent = 'Scraper pobiera dane...';
+  document.getElementById('last-update').textContent = eta > 0 ? `~${eta}s` : 'lada chwila';
+  document.getElementById('cards-container').innerHTML = `
+    <div class="empty" style="padding:80px 20px">
+      <div style="font-size:2.5rem;margin-bottom:16px">⏳</div>
+      <div style="font-size:1.1rem;color:var(--text);font-weight:600;margin-bottom:8px">Pobieranie ofert...</div>
+      <div style="font-size:0.9rem;color:var(--text2);margin-bottom:4px">Serwer właśnie się uruchomił i skanuje portale.</div>
+      <div style="font-size:0.85rem;color:var(--text2)">Odświeżam automatycznie co 15s. Zazwyczaj gotowe w ~90s.</div>
+    </div>`;
+  setTimeout(loadDeals, 15000);
 }
 
 function showError(msg) {

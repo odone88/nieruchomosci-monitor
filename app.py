@@ -27,25 +27,30 @@ REFRESH_SECRET = os.environ.get("REFRESH_SECRET", "nieruchomosci2026")
 
 _scraper_running = False
 _last_run = None
+_last_error = None
 
 
 def run_scraper_bg():
-    """Run monitor.py in background thread."""
-    global _scraper_running, _last_run
+    """Import and call monitor.main() directly — no subprocess, errors visible in logs."""
+    global _scraper_running, _last_run, _last_error
     if _scraper_running:
+        log.info("Scraper already running, skipping.")
         return
     _scraper_running = True
+    _last_error = None
     try:
-        import subprocess
-        # Use sys.executable so it works on Windows and in virtual envs
-        result = subprocess.run(
-            [sys.executable, str(BASE_DIR / "monitor.py"), "--run-once"],
-            capture_output=True, text=True, timeout=300
-        )
+        log.info("Scraper: importing monitor...")
+        sys.path.insert(0, str(BASE_DIR))
+        import importlib
+        import monitor as mon_module
+        importlib.reload(mon_module)   # reload so config changes take effect
+        log.info("Scraper: calling main()...")
+        mon_module.main()
         _last_run = datetime.now().isoformat()
-        log.info(f"Scraper done. Return code: {result.returncode}")
+        log.info(f"Scraper: done at {_last_run}")
     except Exception as e:
-        log.error(f"Scraper error: {e}")
+        _last_error = str(e)
+        log.error(f"Scraper FAILED: {e}", exc_info=True)
     finally:
         _scraper_running = False
 
@@ -149,6 +154,26 @@ def api_refresh():
     thread = threading.Thread(target=run_scraper_bg, daemon=True)
     thread.start()
     return jsonify({"status": "started"})
+
+
+@app.route("/api/status")
+def api_status():
+    """Debug endpoint — shows scraper state and deals.json info."""
+    info = {
+        "scraper_running": _scraper_running,
+        "last_run": _last_run,
+        "last_error": _last_error,
+        "deals_json_exists": DEALS_JSON.exists(),
+        "deals_json_size": DEALS_JSON.stat().st_size if DEALS_JSON.exists() else 0,
+        "python": sys.version,
+        "base_dir": str(BASE_DIR),
+    }
+    if DEALS_JSON.exists():
+        with open(DEALS_JSON, encoding="utf-8") as f:
+            d = json.load(f)
+        info["total_deals"] = d.get("total", 0)
+        info["timestamp"] = d.get("timestamp")
+    return jsonify(info)
 
 
 @app.route("/api/stats")

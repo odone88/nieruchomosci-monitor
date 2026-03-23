@@ -34,13 +34,15 @@ LOG_FILE = BASE_DIR / "deals.log"
 # ---------------------------------------------------------------------------
 # Logging
 # ---------------------------------------------------------------------------
+_handlers = [logging.StreamHandler(sys.stdout)]
+try:
+    _handlers.append(logging.FileHandler(LOG_FILE, encoding="utf-8"))
+except Exception:
+    pass  # log file not writable (e.g. read-only filesystem) — stdout only
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(message)s",
-    handlers=[
-        logging.FileHandler(LOG_FILE, encoding="utf-8"),
-        logging.StreamHandler(sys.stdout),
-    ],
+    handlers=_handlers,
 )
 log = logging.getLogger("monitor")
 

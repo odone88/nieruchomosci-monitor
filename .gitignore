@@ -1,0 +1,9 @@
+*.pyc
+__pycache__/
+deals.json
+deals.log
+history.json
+deals.html
+*.bat
+*.stackdump
+.env

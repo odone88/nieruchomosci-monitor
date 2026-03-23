@@ -1,0 +1,343 @@
+{
+  "markets": {
+    "krakow_centrum": {
+      "enabled": true,
+      "label": "Kraków Centrum",
+      "max_price_m2": 12000,
+      "currency": "PLN",
+      "sources": [
+        "otodom",
+        "olx"
+      ],
+      "city_filter": [
+        "Kraków",
+        "Krakow"
+      ],
+      "type": "mieszkanie",
+      "flag": "🏙️"
+    },
+    "krakow_inne": {
+      "enabled": true,
+      "label": "Kraków Pozostałe",
+      "max_price_m2": 9000,
+      "currency": "PLN",
+      "sources": [
+        "otodom",
+        "olx"
+      ],
+      "city_filter": [
+        "Kraków",
+        "Krakow"
+      ],
+      "type": "mieszkanie",
+      "flag": "🏙️"
+    },
+    "warszawa_centrum": {
+      "enabled": true,
+      "label": "Warszawa Centrum",
+      "max_price_m2": 16000,
+      "currency": "PLN",
+      "sources": [
+        "otodom",
+        "olx"
+      ],
+      "city_filter": [
+        "Warszawa",
+        "Warsaw"
+      ],
+      "type": "mieszkanie",
+      "flag": "🏛️"
+    },
+    "warszawa_inne": {
+      "enabled": true,
+      "label": "Warszawa Pozostałe",
+      "max_price_m2": 12000,
+      "currency": "PLN",
+      "sources": [
+        "otodom",
+        "olx"
+      ],
+      "city_filter": [
+        "Warszawa",
+        "Warsaw"
+      ],
+      "type": "mieszkanie",
+      "flag": "🏛️"
+    },
+    "wroclaw_centrum": {
+      "enabled": true,
+      "label": "Wrocław",
+      "max_price_m2": 11000,
+      "currency": "PLN",
+      "sources": [
+        "otodom"
+      ],
+      "city_filter": [
+        "Wrocław",
+        "Wroclaw"
+      ],
+      "type": "mieszkanie",
+      "flag": "🏰"
+    },
+    "gdansk_centrum": {
+      "enabled": true,
+      "label": "Gdańsk",
+      "max_price_m2": 11000,
+      "currency": "PLN",
+      "sources": [
+        "otodom"
+      ],
+      "city_filter": [
+        "Gdańsk",
+        "Gdansk"
+      ],
+      "type": "mieszkanie",
+      "flag": "⚓"
+    },
+    "krakow_inwestycyjne": {
+      "enabled": true,
+      "label": "Kraków Inwestycyjne",
+      "max_price_m2": 10000,
+      "currency": "PLN",
+      "sources": [
+        "otodom"
+      ],
+      "city_filter": [
+        "Kraków",
+        "Krakow"
+      ],
+      "type": "inwestycyjne",
+      "flag": "💼"
+    },
+    "warszawa_inwestycyjne": {
+      "enabled": true,
+      "label": "Warszawa Inwestycyjne",
+      "max_price_m2": 12000,
+      "currency": "PLN",
+      "sources": [
+        "otodom"
+      ],
+      "city_filter": [
+        "Warszawa",
+        "Warsaw"
+      ],
+      "type": "inwestycyjne",
+      "flag": "💼"
+    },
+    "krakow_dzialki": {
+      "enabled": true,
+      "label": "Kraków Działki",
+      "max_price_m2": 800,
+      "currency": "PLN",
+      "sources": [
+        "otodom"
+      ],
+      "city_filter": [
+        "Kraków",
+        "Krakow"
+      ],
+      "type": "dzialka",
+      "flag": "🌱"
+    },
+    "warszawa_dzialki": {
+      "enabled": true,
+      "label": "Warszawa Działki",
+      "max_price_m2": 1200,
+      "currency": "PLN",
+      "sources": [
+        "otodom"
+      ],
+      "city_filter": [
+        "Warszawa",
+        "Warsaw"
+      ],
+      "type": "dzialka",
+      "flag": "🌱"
+    },
+    "pl_kamienice": {
+      "enabled": true,
+      "label": "Kamienice PL",
+      "max_price_m2": 5000,
+      "currency": "PLN",
+      "sources": [
+        "otodom"
+      ],
+      "city_filter": [],
+      "type": "kamica",
+      "flag": "🏚️"
+    },
+    "valencia": {
+      "enabled": true,
+      "label": "Valencia 🇪🇸",
+      "max_price_m2": 2500,
+      "currency": "EUR",
+      "sources": [
+        "idealista_es"
+      ],
+      "city_filter": [
+        "Valencia",
+        "València"
+      ],
+      "type": "mieszkanie",
+      "flag": "🇪🇸",
+      "roi_rating": 5,
+      "roi_note": "Najlepsza cena/jakość w Europie Zachodniej. ~1500-2500 EUR/m². Yield 5-8%. 3. miasto Hiszpanii pod turystyką."
+    },
+    "athens": {
+      "enabled": true,
+      "label": "Ateny 🇬🇷",
+      "max_price_m2": 3000,
+      "currency": "EUR",
+      "sources": [
+        "xe_gr"
+      ],
+      "city_filter": [
+        "Athens",
+        "Ateny",
+        "Αθήνα"
+      ],
+      "type": "mieszkanie",
+      "flag": "🇬🇷",
+      "roi_rating": 4,
+      "roi_note": "Yield 3,8% centrum - slaby. Golden Visa aktywne: 800k/400k/250k EUR. Transfer tax 3%. Sens dla GV lub aprecjacji."
+    },
+    "bucharest": {
+      "enabled": true,
+      "label": "Bukareszt 🇷🇴",
+      "max_price_m2": 2000,
+      "currency": "EUR",
+      "sources": [
+        "imobiliare"
+      ],
+      "city_filter": [
+        "Bucharest",
+        "București"
+      ],
+      "type": "mieszkanie",
+      "flag": "🇷🇴",
+      "roi_rating": 4,
+      "roi_note": "Yield 4,1% centrum (nie 6-8% jak podawano). Kredyty 7,14%. 10% flat tax. Waluta LEU nie EUR - ryzyko kursowe."
+    },
+    "berlin": {
+      "enabled": false,
+      "label": "Berlin 🇩🇪",
+      "max_price_m2": 5000,
+      "currency": "EUR",
+      "sources": [],
+      "city_filter": [
+        "Berlin"
+      ],
+      "type": "mieszkanie",
+      "flag": "🇩🇪",
+      "roi_rating": 2,
+      "roi_note": "OMIJAJ. 4000-7000 EUR/m². Kontrola czynszów (Mietspiegel) → yield 2-3%. Ryzyko regulacyjne. Przepełniony rynek."
+    },
+    "alicante": {
+      "enabled": true,
+      "label": "Alicante ES",
+      "max_price_m2": 3500,
+      "currency": "EUR",
+      "sources": [
+        "idealista_es"
+      ],
+      "city_filter": [
+        "Alicante",
+        "Alacant"
+      ],
+      "type": "mieszkanie",
+      "flag": "",
+      "roi_rating": 5,
+      "roi_note": "Najwyzszy yield w Europie Zachodniej: 8,7% poza centrum. 3402 EUR/m2. Silny rynek turystyczny. ITP 10%, IRNR 19%."
+    },
+    "malaga": {
+      "enabled": true,
+      "label": "Malaga ES",
+      "max_price_m2": 4500,
+      "currency": "EUR",
+      "sources": [
+        "idealista_es"
+      ],
+      "city_filter": [
+        "Malaga"
+      ],
+      "type": "mieszkanie",
+      "flag": "",
+      "roi_rating": 4,
+      "roi_note": "Najszybciej rosnace miasto Hiszpanii. Yield 7,1% poza centrum. Hub IT i nomadow. ITP 7% (Andaluzja)."
+    },
+    "sofia": {
+      "enabled": true,
+      "label": "Sofia BG",
+      "max_price_m2": 3700,
+      "currency": "EUR",
+      "sources": [],
+      "city_filter": [
+        "Sofia"
+      ],
+      "type": "mieszkanie",
+      "flag": "",
+      "roi_rating": 3,
+      "roi_note": "Najtansza stolica EU z EUR od 2024. Yield 4,4%. 10% flat tax od najmu. Hub IT wschod Europy."
+    }
+  },
+  "min_discount_pct": 15,
+  "alert_discount_pct": 25,
+  "check_interval_hours": 6,
+  "request_delay_min": 2,
+  "request_delay_max": 5,
+  "max_pages": 3,
+  "keywords_pl": [
+    "pilne",
+    "okazja",
+    "poniżej",
+    "do negocjacji",
+    "gotówka",
+    "cash",
+    "szybka sprzedaż",
+    "likwidacja",
+    "komornik",
+    "przetarg",
+    "licytacja",
+    "egzekucja",
+    "bezpośrednio",
+    "właściciel",
+    "zadłużona"
+  ],
+  "keywords_en": [
+    "urgent",
+    "bargain",
+    "below market",
+    "quick sale",
+    "cash",
+    "motivated seller",
+    "price reduced",
+    "must sell",
+    "foreclosure",
+    "auction"
+  ],
+  "keywords_es": [
+    "urgente",
+    "oportunidad",
+    "ganga",
+    "rebajado",
+    "negociable",
+    "ocasión",
+    "particular",
+    "subasta"
+  ],
+  "keywords_pt": [
+    "urgente",
+    "oportunidade",
+    "negociável",
+    "preço reduzido",
+    "ocasião"
+  ],
+  "keywords_ro": [
+    "urgent",
+    "oportunitate",
+    "negociabil",
+    "reducere",
+    "executare",
+    "licitatie"
+  ]
+}

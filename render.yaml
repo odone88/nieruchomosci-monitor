@@ -1,0 +1,9 @@
+services:
+  - type: web
+    name: nieruchomosci-monitor
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn app:app --workers 1 --timeout 120
+    envVars:
+      - key: REFRESH_SECRET
+        value: nieruchomosci2026

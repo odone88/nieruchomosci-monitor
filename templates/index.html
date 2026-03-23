@@ -1,0 +1,729 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Monitor Nieruchomości — Okazje Inwestycyjne</title>
+<style>
+:root {
+  --bg: #0a0a0f;
+  --surface: #13131a;
+  --surface2: #1a1a24;
+  --border: #2a2a38;
+  --text: #e0e0f0;
+  --text2: #888899;
+  --blue: #3b82f6;
+  --green: #22c55e;
+  --yellow: #eab308;
+  --red: #ef4444;
+  --orange: #f97316;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', system-ui, sans-serif; font-size: 16px; min-height: 100vh; }
+
+/* Header */
+.header { background: var(--surface); border-bottom: 1px solid var(--border); padding: 14px 24px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; position: sticky; top: 0; z-index: 100; }
+.header h1 { font-size: 1.3rem; color: #fff; }
+.header h1 span { color: var(--blue); }
+.header-sub { font-size: 0.8rem; color: var(--text2); margin-top: 2px; }
+.header-meta { display: flex; align-items: center; gap: 14px; font-size: 0.85rem; color: var(--text2); flex-wrap: wrap; }
+.refresh-btn { background: var(--blue); color: #fff; border: none; padding: 8px 16px; border-radius: 8px; cursor: pointer; font-size: 0.85rem; display: flex; align-items: center; gap: 6px; white-space: nowrap; }
+.refresh-btn:hover { background: #2563eb; }
+.refresh-btn.loading { opacity: 0.6; cursor: not-allowed; }
+/* Subtle live dot — not distracting */
+.live-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--green); display: inline-block; animation: livepulse 4s ease-in-out infinite; }
+@keyframes livepulse { 0%,80%,100%{opacity:1;} 40%{opacity:0.4;} }
+
+/* Stats bar */
+.stats-bar { display: flex; gap: 1px; background: var(--border); border-bottom: 1px solid var(--border); }
+.stat-item { flex: 1; background: var(--surface); padding: 12px 16px; text-align: center; min-width: 100px; }
+.stat-item .val { font-size: 1.4rem; font-weight: 700; color: var(--green); }
+.stat-item .lbl { font-size: 0.75rem; color: var(--text2); text-transform: uppercase; letter-spacing: 0.05em; margin-top: 2px; }
+/* Skeleton pulse for stats */
+.stat-skeleton { display: inline-block; width: 48px; height: 1.4rem; background: linear-gradient(90deg, var(--surface2) 25%, var(--border) 50%, var(--surface2) 75%); background-size: 200% 100%; animation: shimmer 1.5s infinite; border-radius: 4px; }
+
+/* Filters */
+.filter-section { padding: 14px 24px; background: var(--surface); border-bottom: 1px solid var(--border); }
+.filter-row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 10px; }
+.filter-row:last-child { margin-bottom: 0; }
+.filter-label { font-size: 0.75rem; color: var(--text2); text-transform: uppercase; letter-spacing: 0.05em; min-width: 60px; }
+.tab { padding: 7px 16px; border-radius: 20px; border: 1px solid var(--border); background: var(--surface2); color: var(--text2); cursor: pointer; font-size: 0.875rem; transition: all 0.15s; white-space: nowrap; }
+*:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
+.tab:hover { border-color: var(--blue); color: var(--text); background: rgba(59,130,246,0.1); }
+.tab.active { background: var(--blue); border-color: var(--blue); color: #fff; font-weight: 600; box-shadow: 0 0 0 2px rgba(59,130,246,0.3); }
+.tab.mega { border-color: #7c2d12; color: var(--orange); }
+.tab.mega.active { background: var(--red); border-color: var(--red); color: #fff; box-shadow: 0 0 0 2px rgba(239,68,68,0.3); }
+.search-input { background: var(--surface2); border: 1px solid var(--border); color: var(--text); padding: 7px 14px; border-radius: 8px; font-size: 0.875rem; width: 260px; }
+.search-input:focus { outline: none; border-color: var(--blue); }
+.sort-select { background: var(--surface2); border: 1px solid var(--border); color: var(--text); padding: 6px 12px; border-radius: 8px; font-size: 0.85rem; cursor: pointer; }
+
+/* Interesting-only toggle */
+.toggle-row { display: flex; align-items: center; gap: 10px; padding: 10px 24px; background: rgba(59,130,246,0.05); border-bottom: 1px solid var(--border); }
+.toggle-label { font-size: 0.9rem; color: var(--text); font-weight: 600; }
+.toggle-hint { font-size: 0.82rem; color: var(--text2); }
+.toggle-switch { position: relative; display: inline-block; width: 44px; height: 24px; flex-shrink: 0; }
+.toggle-switch input { opacity: 0; width: 0; height: 0; }
+.toggle-slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background: var(--surface2); border: 1px solid var(--border); border-radius: 24px; transition: 0.2s; }
+.toggle-slider:before { position: absolute; content: ""; height: 18px; width: 18px; left: 2px; bottom: 2px; background: var(--text2); border-radius: 50%; transition: 0.2s; }
+.toggle-switch input:checked + .toggle-slider { background: var(--blue); border-color: var(--blue); }
+.toggle-switch input:checked + .toggle-slider:before { transform: translateX(20px); background: #fff; }
+
+/* Main layout */
+.main { display: flex; min-height: calc(100vh - 220px); }
+/* Sticky sidebar on desktop — scrolls independently */
+.sidebar { width: 290px; flex-shrink: 0; border-right: 1px solid var(--border); background: var(--surface); padding: 16px; display: block; position: sticky; top: 0; max-height: 100vh; overflow-y: auto; align-self: flex-start; scrollbar-width: thin; scrollbar-color: var(--border) transparent; }
+.content { flex: 1; padding: 20px 24px; min-width: 0; }
+
+/* Investment guide sidebar */
+.guide-title { font-size: 0.875rem; font-weight: 600; color: var(--text2); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 12px; }
+.city-card { background: var(--surface2); border: 1px solid var(--border); border-radius: 10px; padding: 12px; margin-bottom: 10px; }
+.city-card-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
+.city-name { font-weight: 600; font-size: 0.9rem; }
+.stars { color: var(--yellow); font-size: 0.875rem; }
+.city-note { font-size: 0.8rem; color: var(--text2); line-height: 1.45; }
+.city-stat-row { font-size: 0.82rem; color: var(--text); margin-bottom: 5px; }
+.city-card.avoid { border-color: var(--red); opacity: 0.7; }
+.city-card.avoid .stars { color: var(--red); }
+
+/* Cards grid */
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 16px; }
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; transition: transform 0.15s, box-shadow 0.15s; display: flex; flex-direction: column; }
+.card:hover { transform: translateY(-2px); box-shadow: 0 8px 32px rgba(0,0,0,0.5); }
+.card.mega-deal { border-color: #7c2d12; box-shadow: 0 0 0 1px var(--red) inset; }
+.card.good-deal { border-color: #14532d; }
+.card.interesting { border-color: #1e3a5f; }
+
+.card-image { height: 200px; overflow: hidden; background: var(--surface2); position: relative; }
+.card-image img { width: 100%; height: 100%; object-fit: cover; }
+.card-image .no-img { display: flex; align-items: center; justify-content: center; height: 100%; color: var(--text2); font-size: 2rem; }
+.badge { position: absolute; top: 10px; left: 10px; padding: 4px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; }
+.badge-mega { background: var(--green); color: #000; }
+.badge-good { background: var(--yellow); color: #000; }
+.badge-ok { background: var(--blue); color: #fff; }
+.badge-new { position: absolute; top: 10px; right: 80px; background: var(--orange); color: #fff; padding: 3px 8px; border-radius: 20px; font-size: 0.7rem; font-weight: 700; text-transform: uppercase; }
+.badge-type { position: absolute; top: 10px; right: 10px; background: rgba(0,0,0,0.75); color: #fff; padding: 2px 8px; border-radius: 10px; font-size: 0.72rem; }
+
+.card-body { padding: 14px; display: flex; flex-direction: column; flex: 1; }
+.market-tag { font-size: 0.8rem; color: var(--text2); margin-bottom: 4px; }
+.card-title { font-size: 1rem; font-weight: 600; margin-bottom: 8px; line-height: 1.3; }
+.card-title a { color: var(--text); text-decoration: none; }
+.card-title a:hover { color: var(--blue); }
+.price-row { display: flex; align-items: baseline; gap: 10px; margin-bottom: 6px; flex-wrap: wrap; }
+.price { font-size: 1.3rem; font-weight: 700; color: #fff; }
+.price-m2 { font-size: 0.85rem; color: var(--text2); }
+/* discount-badge: red = GREAT deal (big discount), green/blue = smaller */
+.discount-badge { font-size: 0.8rem; font-weight: 700; padding: 2px 8px; border-radius: 10px; }
+.discount-badge.high { background: rgba(34,197,94,0.2); color: var(--green); }
+.discount-badge.med { background: rgba(234,179,8,0.2); color: var(--yellow); }
+.discount-badge.low { background: rgba(59,130,246,0.15); color: var(--blue); }
+.meta-row { display: flex; gap: 12px; font-size: 0.82rem; color: var(--text2); margin-bottom: 8px; flex-wrap: wrap; }
+.location { display: flex; align-items: center; gap: 4px; }
+.location::before { content: '📍'; font-size: 0.7rem; }
+.justification { font-size: 0.82rem; color: #a0a0b8; line-height: 1.5; border-top: 1px solid var(--border); padding-top: 8px; margin-top: auto; }
+.reasons { font-size: 0.8rem; color: var(--yellow); margin-top: 4px; }
+
+/* Empty state */
+.empty { text-align: center; padding: 60px 20px; color: var(--text2); }
+.empty-icon { font-size: 3rem; margin-bottom: 12px; }
+
+/* Error state */
+.error-state { text-align: center; padding: 60px 20px; }
+.error-icon { font-size: 3rem; margin-bottom: 12px; }
+.error-title { font-size: 1.1rem; color: var(--red); margin-bottom: 8px; }
+.error-msg { font-size: 0.85rem; color: var(--text2); margin-bottom: 16px; }
+.error-retry { background: var(--blue); color: #fff; border: none; padding: 8px 20px; border-radius: 8px; cursor: pointer; font-size: 0.9rem; }
+
+/* Skeleton loading */
+.loading-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 16px; }
+.skeleton { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+.skeleton-img { height: 200px; background: linear-gradient(90deg, var(--surface2) 25%, var(--border) 50%, var(--surface2) 75%); background-size: 200% 100%; animation: shimmer 1.5s infinite; }
+@keyframes shimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
+.skeleton-body { padding: 14px; }
+.skeleton-line { height: 13px; background: linear-gradient(90deg, var(--surface2) 25%, var(--border) 50%, var(--surface2) 75%); background-size: 200% 100%; animation: shimmer 1.5s infinite; border-radius: 4px; margin-bottom: 8px; }
+.skeleton-line.w60 { width: 60%; }
+.skeleton-line.w80 { width: 80%; }
+.skeleton-line.w40 { width: 40%; }
+
+/* Load more */
+.load-more-row { text-align: center; padding: 24px 0; }
+.load-more-btn { background: var(--surface2); border: 1px solid var(--border); color: var(--text); padding: 10px 28px; border-radius: 8px; cursor: pointer; font-size: 0.9rem; transition: all 0.15s; }
+.load-more-btn:hover { border-color: var(--blue); color: var(--blue); }
+
+/* Responsive */
+@media (max-width: 900px) {
+  .main { flex-direction: column; }
+  .sidebar { width: 100%; border-right: none; border-bottom: 1px solid var(--border); display: none; }
+  .sidebar.shown { display: block; }
+  .grid { grid-template-columns: 1fr; }
+  #guide-toggle { display: block !important; }
+}
+@media (max-width: 600px) {
+  .header { flex-direction: column; align-items: flex-start; }
+  .header-meta { flex-direction: row; flex-wrap: wrap; gap: 8px; }
+  .stats-bar { display: grid; grid-template-columns: 1fr 1fr; }
+  .content { padding: 12px; }
+  .filter-section { padding: 12px; }
+  .toggle-row { padding: 10px 12px; }
+  .search-input { width: 100%; }
+}
+</style>
+</head>
+<body>
+
+<header class="header">
+  <div>
+    <h1>🏠 Monitor <span>Nieruchomości</span></h1>
+    <div class="header-sub">Kraków · Warszawa · Wrocław · Gdańsk · Europa</div>
+  </div>
+  <div class="header-meta">
+    <span><span class="live-dot"></span> Aktualizacja co 6h</span>
+    <span id="last-update">Ładowanie...</span>
+    <button class="refresh-btn" id="refresh-btn" onclick="triggerRefresh()">
+      ⟳ Odśwież teraz
+    </button>
+  </div>
+</header>
+
+<div class="stats-bar">
+  <div class="stat-item"><div class="val" id="stat-total"><span class="stat-skeleton"></span></div><div class="lbl">Ofert łącznie</div></div>
+  <div class="stat-item"><div class="val" id="stat-mega" style="color:var(--green)"><span class="stat-skeleton"></span></div><div class="lbl">Mega okazji ≥25%</div></div>
+  <div class="stat-item"><div class="val" id="stat-good" style="color:var(--yellow)"><span class="stat-skeleton"></span></div><div class="lbl">Okazje 15-25%</div></div>
+  <div class="stat-item"><div class="val" id="stat-new" style="color:var(--orange)"><span class="stat-skeleton"></span></div><div class="lbl">Nowe dziś</div></div>
+  <div class="stat-item"><div class="val" id="stat-eu" style="color:var(--blue)"><span class="stat-skeleton"></span></div><div class="lbl">Europejskie</div></div>
+</div>
+
+<!-- Interesting-only toggle -->
+<div class="toggle-row">
+  <label class="toggle-switch">
+    <input type="checkbox" id="interesting-toggle" checked onchange="filterDeals()">
+    <span class="toggle-slider"></span>
+  </label>
+  <span class="toggle-label">Tylko okazje</span>
+  <span class="toggle-hint">(rabat ≥8% lub score &gt;0)</span>
+</div>
+
+<div class="filter-section">
+  <div class="filter-row">
+    <span class="filter-label">Miasto</span>
+    <button class="tab active" data-market="all" onclick="setMarket('all',this)">Wszystkie</button>
+    <button class="tab" data-market="krakow" onclick="setMarket('krakow',this)" id="tab-krakow">🏙️ Kraków</button>
+    <button class="tab" data-market="warszawa" onclick="setMarket('warszawa',this)" id="tab-warszawa">🏛️ Warszawa</button>
+    <button class="tab" data-market="wroclaw" onclick="setMarket('wroclaw',this)" id="tab-wroclaw">🏰 Wrocław</button>
+    <button class="tab" data-market="gdansk" onclick="setMarket('gdansk',this)" id="tab-gdansk">⚓ Gdańsk</button>
+    <button class="tab" data-market="europa" onclick="setMarket('europa',this)" id="tab-europa">🌍 Europa</button>
+  </div>
+  <div class="filter-row">
+    <span class="filter-label">Typ</span>
+    <button class="tab active" data-type="all" onclick="setType('all',this)">Wszystkie</button>
+    <button class="tab" data-type="mieszkanie" onclick="setType('mieszkanie',this)">🏢 Mieszkania</button>
+    <button class="tab" data-type="dzialka" onclick="setType('dzialka',this)">🌱 Działki</button>
+    <button class="tab" data-type="inwestycyjne" onclick="setType('inwestycyjne',this)">💼 Inwestycyjne</button>
+    <button class="tab" data-type="kamica" onclick="setType('kamica',this)">🏚️ Kamienice</button>
+  </div>
+  <div class="filter-row">
+    <span class="filter-label">Okazja</span>
+    <button class="tab active" data-disc="0" onclick="setDiscount(0,this)">Wszystkie</button>
+    <button class="tab" data-disc="10" onclick="setDiscount(10,this)">-10%+</button>
+    <button class="tab" data-disc="20" onclick="setDiscount(20,this)">-20%+ Okazja</button>
+    <button class="tab mega" data-disc="30" onclick="setDiscount(30,this)">-30%+ MEGA</button>
+    <input type="text" class="search-input" id="search-input" placeholder="🔍 Szukaj adres, słowo kluczowe..." oninput="debouncedFilter()">
+    <select class="sort-select" id="sort-select" onchange="filterDeals()">
+      <option value="score">Sortuj: Score</option>
+      <option value="discount">Sortuj: Rabat %</option>
+      <option value="price_asc">Sortuj: Cena ↑</option>
+      <option value="price_desc">Sortuj: Cena ↓</option>
+      <option value="date">Sortuj: Najnowsze</option>
+    </select>
+  </div>
+</div>
+
+<div class="main">
+      <aside class="sidebar" id="sidebar">
+    <div class="guide-title">&#128202; Gdzie inwestować? <span style="font-size:0.7rem;color:var(--text2);font-weight:400">Numbeo marzec 2026</span></div>
+
+    <div style="font-size:0.75rem;color:var(--text2);margin-bottom:10px;padding:8px;background:rgba(59,130,246,0.08);border-radius:6px;border-left:2px solid var(--blue)">
+      Yieldy brutto. Netto o ~3&#8209;5 pp niżej po kosztach zarządzania, wakatu i podatków.
+    </div>
+
+    <div class="city-card" style="border-color:#16a34a">
+      <div class="city-card-header">
+        <span class="city-name">&#127466;&#127480; Alicante / Costa Blanca</span>
+        <span class="stars">&#9733;&#9733;&#9733;&#9733;&#189;</span>
+      </div>
+      <div class="city-stat-row">3 402 EUR/m&#178; &middot; yield <strong style="color:var(--green)">8,7%</strong> poza centrum</div>
+      <div class="city-note">Najwyższy yield w zestawieniu. Silny popyt turystyczny (Brytyjczycy, Skandynawowie). Bezpośrednie loty z PL. ITP 10%, IRNR 19%. Airbnb: licencja VUT wymagana, ale dostępna.</div>
+    </div>
+
+    <div class="city-card" style="border-color:#16a34a">
+      <div class="city-card-header">
+        <span class="city-name">&#127470;&#127466; Dublin</span>
+        <span class="stars">&#9733;&#9733;&#9733;&#9733;</span>
+      </div>
+      <div class="city-stat-row">7 034 EUR/m&#178; &middot; yield <strong style="color:var(--green)">6,5&ndash;7,3%</strong> (centr./poza)</div>
+      <div class="city-note">Anglojęzyczna stolica UE z hub tech (Google, Meta, Apple) = stabilny popyt. Wysoki podatek dochodowy (20&#8209;40% + USC), netto ~4%. RPZ cap: +2%/rok czynszu. Opłata wejścia: stamp duty 1%. Najlepszy gross yield z ośmiu badanych miast.</div>
+    </div>
+
+    <div class="city-card" style="border-color:#16a34a">
+      <div class="city-card-header">
+        <span class="city-name">&#127466;&#127480; Malaga</span>
+        <span class="stars">&#9733;&#9733;&#9733;&#9733;</span>
+      </div>
+      <div class="city-stat-row">4 422 EUR/m&#178; &middot; yield <strong style="color:var(--green)">7,1%</strong> poza centrum</div>
+      <div class="city-note">Najszybciej rosnące miasto Hiszpanii &mdash; hub IT i nomadów cyfrowych. Silna aprecjacja kapitału. ITP <strong>7%</strong> (Andaluzja = najtaniej w ES). Centrum: nowe licencje STR ograniczone.</div>
+    </div>
+
+    <div class="city-card">
+      <div class="city-card-header">
+        <span class="city-name">&#127466;&#127480; Valencia</span>
+        <span class="stars">&#9733;&#9733;&#9733;&#9733;</span>
+      </div>
+      <div class="city-stat-row">4 853 EUR/m&#178; &middot; yield <strong style="color:var(--yellow)">6,2%</strong> poza centrum</div>
+      <div class="city-note"><strong style="color:var(--red)">&#9888; POWÓDŹ DANA X 2024:</strong> Gminy południa (Paiporta, Torrent, Aldaia) zniszczone. Sprawdź mapę SNCZI przed zakupem! Centrum miasta &mdash; OK. STR: nowe licencje wstrzymane w wielu dzielnicach.</div>
+    </div>
+
+    <div class="city-card">
+      <div class="city-card-header">
+        <span class="city-name">&#127477;&#127481; Porto</span>
+        <span class="stars">&#9733;&#9733;&#9733;&#9733;</span>
+      </div>
+      <div class="city-stat-row">4 460 EUR/m&#178; &middot; yield <strong style="color:var(--yellow)">5,3%</strong> centrum</div>
+      <div class="city-note">Stabilny wzrost, ograniczona podaż centrum. Tańszy niż Lizbona o ~30%. STR: nowe licencje AL zamrożone w obszarach historycznych. Podatek od najmu 25% (nierezydent). Golden Visa: &#10007; nieruchomości usunięte 2024.</div>
+    </div>
+
+    <div class="city-card">
+      <div class="city-card-header">
+        <span class="city-name">&#127470;&#127481; Milan (poza centrum)</span>
+        <span class="stars">&#9733;&#9733;&#9733;</span>
+      </div>
+      <div class="city-stat-row">4 436 EUR/m&#178; &middot; yield <strong style="color:var(--yellow)">5,0%</strong> poza centrum</div>
+      <div class="city-note">Centrum absurdalnie drogie (9 343 EUR/m², yield 3,6%) &mdash; tylko dzielnice jak Niguarda, Affori, Lambrate mają sens. Cedolare secca 21% (ryczałt). <strong style="color:var(--red)">&#9888; Eksmisje 3&ndash;5 lat</strong> &mdash; tylko z property managerem na miejscu.</div>
+    </div>
+
+    <div class="city-card">
+      <div class="city-card-header">
+        <span class="city-name">&#127475;&#127473; Amsterdam</span>
+        <span class="stars">&#9733;&#9733;&#9733;</span>
+      </div>
+      <div class="city-stat-row">6 316&ndash;9 284 EUR/m&#178; &middot; yield <strong style="color:var(--yellow)">4,9&ndash;5,4%</strong></div>
+      <div class="city-note"><strong style="color:var(--red)">&#9888; USTAWA 2024:</strong> Wet betaalbare huur &mdash; 90% nowego zasobu prywatnego objęte limitem czynszu ~1 157 EUR/mies. Airbnb: ban dla nierezydentów. Transfer tax <strong>10,4%</strong>. Box 3: podatek majątkowy ~36% od fikcyjnej stopy, nie od realnego czynszu.</div>
+    </div>
+
+    <div class="city-card">
+      <div class="city-card-header">
+        <span class="city-name">&#127463;&#127468; Sofia</span>
+        <span class="stars">&#9733;&#9733;&#9733;&#189;</span>
+      </div>
+      <div class="city-stat-row">3 642 EUR/m&#178; &middot; yield <strong style="color:var(--yellow)">4,4%</strong> centrum</div>
+      <div class="city-note">Najtańsza stolica EU z EUR od 2024/2025 &rarr; zero ryzyka walutowego. <strong>10% flat tax</strong> od najmu (najkorzystniej w UE). Hub IT wschód Europy. Brak Golden Visa. Mała płynność rynku.</div>
+    </div>
+
+    <div class="city-card">
+      <div class="city-card-header">
+        <span class="city-name">&#127473;&#127483; Ryga</span>
+        <span class="stars">&#9733;&#9733;&#9733;</span>
+      </div>
+      <div class="city-stat-row">2 711 EUR/m&#178; &middot; yield <strong style="color:var(--yellow)">4,4%</strong> centrum</div>
+      <div class="city-note">Najniższa cena wejścia spośród stolic EU. EUR + NATO. <strong>Golden Visa: 250k EUR</strong> poza Rygą / 500k w Rydze. Ryzyko geopolityczne (bliskość Rosji). Mały rynek, ograniczona płynność.</div>
+    </div>
+
+    <div class="city-card">
+      <div class="city-card-header">
+        <span class="city-name">&#127479;&#127476; Bukareszt</span>
+        <span class="stars">&#9733;&#9733;&#9733;</span>
+      </div>
+      <div class="city-stat-row">~3 800 EUR/m&#178; &middot; yield <strong style="color:var(--text2)">4,1%</strong> centrum</div>
+      <div class="city-note">Rosnąca klasa średnia, hub IT. Yield realnie 4,1% (nie 6&#8209;8% jak często podawano). Kredyty lokalne po 7,14%! <strong>10% flat tax</strong> od najmu. Waluta: LEU (nie EUR) &mdash; ryzyko kursowe.</div>
+    </div>
+
+    <div class="city-card">
+      <div class="city-card-header">
+        <span class="city-name">&#127468;&#127479; Ateny</span>
+        <span class="stars">&#9733;&#9733;&#9733;</span>
+      </div>
+      <div class="city-stat-row">3 551 EUR/m&#178; &middot; yield <strong style="color:var(--text2)">3,8%</strong> centrum</div>
+      <div class="city-note"><strong>Golden Visa aktywne:</strong> 800k EUR (Ateny/wyspy), 400k EUR (reszta GR), 250k EUR (adaptacja budynku). Yield 3,8% słaby &mdash; sens tylko dla Golden Visa lub zakładu na aprecjację. Transfer tax zaledwie 3%.</div>
+    </div>
+
+    <div style="border-top:1px solid var(--border);margin:12px 0 10px;padding-top:10px">
+      <div class="guide-title" style="margin-bottom:8px">&#9940; Unikać</div>
+    </div>
+
+    <div class="city-card avoid">
+      <div class="city-card-header">
+        <span class="city-name">&#127473;&#127481; Wilno</span>
+        <span class="stars">&#9733;&#9733; PUŁAPKA</span>
+      </div>
+      <div class="city-stat-row">5 244 EUR/m&#178; &middot; yield <strong>3,0%</strong> &middot; P/R = 33&times;</div>
+      <div class="city-note">Droższe niż Walencja czy Porto, yield tylko 3%. Najgorzej wyceniony rynek w zestawieniu. Omijaj.</div>
+    </div>
+
+    <div class="city-card avoid">
+      <div class="city-card-header">
+        <span class="city-name">&#127465;&#127466; Berlin / Munich</span>
+        <span class="stars">&#9733;&#9733; OMIJAJ</span>
+      </div>
+      <div class="city-stat-row">Berlin: 4&#8209;7k EUR/m² ~2&#8209;3% &middot; Munich: 8&#8209;11k EUR/m² ~3%</div>
+      <div class="city-note">Mietspiegel (kontrola czynszów) &rarr; yield nie do poprawienia. Niemcy: najsilniejsza ochrona lokatorów w UE. Za cenę jednego mieszkania w Monachium kupujesz 3 w Alicante z 3&times; wyższym yieldiem.</div>
+    </div>
+
+    <div class="city-card avoid">
+      <div class="city-card-header">
+        <span class="city-name">&#127468;&#127463; Londyn</span>
+        <span class="stars">&#9733;&#9733; DROGI/RYZYKO</span>
+      </div>
+      <div class="city-stat-row">9&#8209;17k EUR/m&#178; &middot; yield 3,2&#8209;4,6% &middot; non-EU</div>
+      <div class="city-note">Najdroższe miasto w zestawieniu. Stamp duty: standardowe + 5% surcharge za dodatkową + 2% dla nierezydenta = 7&#8209;17% kosztów zakupu. Podatek dochodowy 20&#8209;45%. Post-Brexit brak prawa pobytu. Ryzyko walutowe GBP/PLN.</div>
+    </div>
+
+    <div class="city-card avoid">
+      <div class="city-card-header">
+        <span class="city-name">&#127479;&#127480; Belgrad (non-EU)</span>
+        <span class="stars">&#9733;&#9733; RYZYKO</span>
+      </div>
+      <div class="city-stat-row">~4 300 EUR/m&#178; &middot; yield 3,9% &middot; ryzyko walutowe</div>
+      <div class="city-note">Yield 3,9% nie kompensuje ryzyka non-EU. Dinar serbski, słabsza egzekucja prawa. Serbia w kandydaturze do EU od 2012 &mdash; wejście niepewne.</div>
+    </div>
+
+    <div style="border-top:1px solid var(--border);margin:12px 0 10px;padding-top:10px">
+      <div class="guide-title" style="margin-bottom:8px">&#128130; Golden Visa 2025</div>
+    </div>
+    <div style="font-size:0.78rem;color:var(--text2);line-height:1.8">
+      <div>&#127468;&#127479; <strong>Grecja</strong> &mdash; 800k/400k/250k EUR &#10003;</div>
+      <div>&#127473;&#127483; <strong>Łotwa</strong> &mdash; 250k/500k EUR &#10003;</div>
+      <div>&#127477;&#127481; <strong>Portugalia</strong> &mdash; &#10007; nieruchomości usunięte 2024</div>
+      <div>&#127466;&#127480; <strong>Hiszpania</strong> &mdash; &#10007; zlikwidowane 3 IV 2025</div>
+      <div style="font-size:0.72rem;margin-top:6px;opacity:0.7">Polak (obywatel EU) nie potrzebuje Golden Visa do zamieszkania w żadnym kraju EU.</div>
+    </div>
+  </aside>
+
+  <div class="content">
+    <div id="results-info" style="font-size:0.85rem;color:var(--text2);margin-bottom:14px;display:flex;justify-content:space-between;align-items:center;">
+      <span id="results-count">Ładowanie ofert...</span>
+      <button onclick="document.getElementById('sidebar').classList.toggle('shown')" style="background:var(--surface2);border:1px solid var(--border);color:var(--text2);padding:4px 10px;border-radius:6px;cursor:pointer;font-size:0.8rem;display:none" id="guide-toggle">📊 Przewodnik</button>
+    </div>
+    <div id="cards-container">
+      <!-- Skeleton loading -->
+      <div class="loading-grid" id="skeleton">
+        <div class="skeleton"><div class="skeleton-img"></div><div class="skeleton-body"><div class="skeleton-line w60"></div><div class="skeleton-line w80"></div><div class="skeleton-line w40"></div></div></div>
+        <div class="skeleton"><div class="skeleton-img"></div><div class="skeleton-body"><div class="skeleton-line w60"></div><div class="skeleton-line w80"></div><div class="skeleton-line w40"></div></div></div>
+        <div class="skeleton"><div class="skeleton-img"></div><div class="skeleton-body"><div class="skeleton-line w60"></div><div class="skeleton-line w80"></div><div class="skeleton-line w40"></div></div></div>
+        <div class="skeleton"><div class="skeleton-img"></div><div class="skeleton-body"><div class="skeleton-line w60"></div><div class="skeleton-line w80"></div><div class="skeleton-line w40"></div></div></div>
+        <div class="skeleton"><div class="skeleton-img"></div><div class="skeleton-body"><div class="skeleton-line w60"></div><div class="skeleton-line w80"></div><div class="skeleton-line w40"></div></div></div>
+        <div class="skeleton"><div class="skeleton-img"></div><div class="skeleton-body"><div class="skeleton-line w60"></div><div class="skeleton-line w80"></div><div class="skeleton-line w40"></div></div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+let allDeals = [];
+let markets = {};
+let currentMarket = 'all';
+let currentType = 'all';
+let currentDiscount = 0;
+let visibleCount = 50;   // cards currently rendered
+const PAGE_SIZE = 50;    // how many to add per "load more"
+
+// Debounce — search input fires max once per 200ms
+let _searchTimer = null;
+function debouncedFilter() {
+  clearTimeout(_searchTimer);
+  _searchTimer = setTimeout(filterDeals, 200);
+}
+
+// Market groups for city-tab filtering (maps city tabs -> market keys)
+const MARKET_GROUPS = {
+  krakow:   ['krakow_centrum','krakow_inne','krakow_inwestycyjne','krakow_dzialki'],
+  warszawa: ['warszawa_centrum','warszawa_inne','warszawa_inwestycyjne','warszawa_dzialki'],
+  wroclaw:  ['wroclaw_centrum'],
+  gdansk:   ['gdansk_centrum'],
+  europa:   ['valencia','athens','bucharest','barcelona','lizbona','alicante','malaga','sofia','berlin','london','munich','amsterdam','dublin','tallinn','milan'],
+};
+
+// 24-hour cutoff for "Nowe" badge
+const NOW = Date.now();
+const H24 = 24 * 60 * 60 * 1000;
+
+function isNew(deal) {
+  if (!deal.found_at) return false;
+  return (NOW - new Date(deal.found_at).getTime()) < H24;
+}
+
+async function loadDeals() {
+  try {
+    // Default: fetch interesting-only to reduce payload
+    const r = await fetch('/api/deals?interesting_only=true&limit=500');
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    const data = await r.json();
+    allDeals = data.deals || [];
+    markets = data.markets || {};
+
+    document.getElementById('last-update').textContent =
+      data.timestamp ? '⏱ ' + new Date(data.timestamp).toLocaleString('pl') : 'Brak danych';
+
+    updateStats(data);
+    updateMarketTabCounts();
+    visibleCount = PAGE_SIZE;
+    filterDeals();
+
+    const skel = document.getElementById('skeleton');
+    if (skel) skel.remove();
+  } catch(e) {
+    console.error(e);
+    const skel = document.getElementById('skeleton');
+    if (skel) skel.remove();
+    showError(e.message);
+  }
+}
+
+function showError(msg) {
+  document.getElementById('results-count').textContent = 'Błąd';
+  document.getElementById('cards-container').innerHTML = `
+    <div class="error-state">
+      <div class="error-icon">⚠️</div>
+      <div class="error-title">Nie udało się załadować danych</div>
+      <div class="error-msg">${msg || 'Sprawdź połączenie i spróbuj ponownie.'}</div>
+      <button class="error-retry" onclick="loadDeals()">Spróbuj ponownie</button>
+    </div>`;
+}
+
+function updateStats(data) {
+  const deals = data.deals || [];
+  document.getElementById('stat-total').textContent = data.total || deals.length;
+  document.getElementById('stat-mega').textContent = deals.filter(d => (d.discount_pct || 0) >= 25).length;
+  document.getElementById('stat-good').textContent = deals.filter(d => (d.discount_pct || 0) >= 15 && (d.discount_pct || 0) < 25).length;
+  document.getElementById('stat-new').textContent = deals.filter(d => isNew(d)).length;
+  document.getElementById('stat-eu').textContent = deals.filter(d => MARKET_GROUPS.europa.includes(d.market)).length;
+}
+
+function updateMarketTabCounts() {
+  // Add (count) to each city tab
+  const tabs = {
+    krakow:   'tab-krakow',
+    warszawa: 'tab-warszawa',
+    wroclaw:  'tab-wroclaw',
+    gdansk:   'tab-gdansk',
+    europa:   'tab-europa',
+  };
+  const labels = {
+    krakow:   '🏙️ Kraków',
+    warszawa: '🏛️ Warszawa',
+    wroclaw:  '🏰 Wrocław',
+    gdansk:   '⚓ Gdańsk',
+    europa:   '🌍 Europa',
+  };
+  for (const [key, id] of Object.entries(tabs)) {
+    const el = document.getElementById(id);
+    if (!el) continue;
+    const group = MARKET_GROUPS[key] || [];
+    const cnt = allDeals.filter(d => group.includes(d.market)).length;
+    el.textContent = labels[key] + (cnt ? ` (${cnt})` : '');
+  }
+}
+
+function setMarket(m, el) {
+  currentMarket = m;
+  document.querySelectorAll('[data-market]').forEach(b => b.classList.remove('active'));
+  el.classList.add('active');
+  visibleCount = PAGE_SIZE;
+  filterDeals();
+}
+
+function setType(t, el) {
+  currentType = t;
+  document.querySelectorAll('[data-type]').forEach(b => b.classList.remove('active'));
+  el.classList.add('active');
+  visibleCount = PAGE_SIZE;
+  filterDeals();
+}
+
+function setDiscount(d, el) {
+  currentDiscount = d;
+  document.querySelectorAll('[data-disc]').forEach(b => b.classList.remove('active'));
+  el.classList.add('active');
+  visibleCount = PAGE_SIZE;
+  filterDeals();
+}
+
+function filterDeals() {
+  let deals = [...allDeals];
+  const search = document.getElementById('search-input').value.toLowerCase();
+  const sort = document.getElementById('sort-select').value;
+  const interestingOnly = document.getElementById('interesting-toggle').checked;
+
+  // Market filter — uses MARKET_GROUPS to map city tab to market keys
+  if (currentMarket !== 'all') {
+    const group = MARKET_GROUPS[currentMarket] || [];
+    deals = deals.filter(d => group.includes(d.market));
+  }
+
+  // Type filter — uses the `type` field returned from API (from config)
+  if (currentType !== 'all') {
+    deals = deals.filter(d => d.type === currentType);
+  }
+
+  // Discount filter
+  if (currentDiscount > 0) {
+    deals = deals.filter(d => (d.discount_pct || 0) >= currentDiscount);
+  }
+
+  // Interesting-only toggle
+  if (interestingOnly) {
+    deals = deals.filter(d => (d.discount_pct || 0) >= 8 || (d.okazja_score || 0) > 0);
+  }
+
+  // Search
+  if (search) {
+    deals = deals.filter(d =>
+      (d.title || '').toLowerCase().includes(search) ||
+      (d.location || '').toLowerCase().includes(search) ||
+      (d.justification || '').toLowerCase().includes(search)
+    );
+  }
+
+  // Sort
+  if (sort === 'discount') deals.sort((a,b) => (b.discount_pct||0) - (a.discount_pct||0));
+  else if (sort === 'price_asc') deals.sort((a,b) => (a.price||0) - (b.price||0));
+  else if (sort === 'price_desc') deals.sort((a,b) => (b.price||0) - (a.price||0));
+  else if (sort === 'date') deals.sort((a,b) => (b.found_at||'').localeCompare(a.found_at||''));
+  else deals.sort((a,b) => (b.okazja_score||0) - (a.okazja_score||0));
+
+  const total = deals.length;
+  const shown = Math.min(visibleCount, total);
+  document.getElementById('results-count').textContent = shown < total
+    ? `Wyświetlam ${shown} z ${total} ofert`
+    : `${total} ofert`;
+
+  renderDeals(deals.slice(0, visibleCount), total);
+}
+
+function renderDeals(deals, totalFiltered) {
+  const container = document.getElementById('cards-container');
+
+  if (!deals.length) {
+    container.innerHTML = '<div class="empty"><div class="empty-icon">🔍</div><div>Brak ofert spełniających kryteria</div><div style="font-size:0.85rem;margin-top:8px">Zmień filtry lub wyłącz "Tylko okazje"</div></div>';
+    return;
+  }
+
+  // Use DocumentFragment for performance — no innerHTML loop
+  const frag = document.createDocumentFragment();
+  const grid = document.createElement('div');
+  grid.className = 'grid';
+
+  deals.forEach(d => {
+    const disc = d.discount_pct || 0;
+    const cardClass = disc >= 25 ? 'card mega-deal' : disc >= 15 ? 'card good-deal' : disc >= 8 ? 'card interesting' : 'card';
+
+    // badge-mega = green (BIG discount = GOOD), badge-good = yellow
+    const badge = disc >= 25
+      ? '<span class="badge badge-mega">MEGA OKAZJA</span>'
+      : disc >= 15 ? '<span class="badge badge-good">OKAZJA</span>'
+      : disc >= 8  ? '<span class="badge badge-ok">Ciekawe</span>'
+      : '';
+
+    // discount-badge colors: high (green) = big discount = good deal
+    const discBadge = disc > 0
+      ? `<span class="discount-badge ${disc>=25?'high':disc>=15?'med':'low'}">-${disc.toFixed(0)}% rynek</span>`
+      : '';
+
+    const newBadge = isNew(d) ? '<span class="badge-new">Nowe</span>' : '';
+
+    const currency = (markets[d.market]||{}).currency || 'PLN';
+    const flag = d.market_flag || '';
+    const marketLabel = d.market_label || d.market;
+
+    const priceFormatted = (d.price||0).toLocaleString('pl-PL');
+    const pm2Formatted = (d.price_m2||0).toLocaleString('pl-PL');
+
+    const card = document.createElement('div');
+    card.className = cardClass;
+
+    const safeTitle = (d.title||'').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    const safeUrl = (d.url||'#').replace(/"/g,'%22');
+    const safeJustif = d.justification ? d.justification.replace(/</g,'&lt;').replace(/>/g,'&gt;') : '';
+    const reasons = (d.okazja_reasons||[]).length
+      ? `<div class="reasons">⚡ ${d.okazja_reasons.slice(0,2).join(' · ')}</div>`
+      : '';
+    const justif = safeJustif ? `<div class="justification">${safeJustif}</div>` : '';
+
+    let imgHtml;
+    if (d.image_url) {
+      const safeImg = d.image_url.replace(/"/g,'%22');
+      imgHtml = `<img src="${safeImg}" alt="" loading="lazy" onerror="this.parentNode.innerHTML='<div class=no-img>🏠</div>'">`;
+    } else {
+      imgHtml = '<div class="no-img">🏠</div>';
+    }
+
+    card.innerHTML = `
+      <div class="card-image">
+        ${imgHtml}
+        ${badge}
+        ${newBadge}
+        <span class="badge-type">${flag} ${marketLabel}</span>
+      </div>
+      <div class="card-body">
+        <div class="card-title"><a href="${safeUrl}" target="_blank" rel="noopener">${safeTitle.substring(0,90)}</a></div>
+        <div class="price-row">
+          <span class="price">${priceFormatted} ${currency}</span>
+          <span class="price-m2">${pm2Formatted} ${currency}/m²</span>
+          ${discBadge}
+        </div>
+        <div class="meta-row">
+          <span class="location">${(d.location||'—').replace(/</g,'&lt;')}</span>
+          <span>📐 ${(d.area||0).toFixed(0)} m²</span>
+          <span>🏷️ ${(d.source||'').toUpperCase()}</span>
+        </div>
+        ${reasons}
+        ${justif}
+      </div>`;
+
+    grid.appendChild(card);
+  });
+
+  frag.appendChild(grid);
+
+  // "Load more" button if there are more results
+  if (totalFiltered > visibleCount) {
+    const row = document.createElement('div');
+    row.className = 'load-more-row';
+    row.innerHTML = `<button class="load-more-btn" onclick="loadMore()">Załaduj więcej (${totalFiltered - visibleCount} pozostałych)</button>`;
+    frag.appendChild(row);
+  }
+
+  container.innerHTML = '';
+  container.appendChild(frag);
+}
+
+function loadMore() {
+  visibleCount += PAGE_SIZE;
+  filterDeals();
+}
+
+async function triggerRefresh() {
+  const btn = document.getElementById('refresh-btn');
+  btn.classList.add('loading');
+  btn.textContent = '⟳ Uruchamianie...';
+  try {
+    const r = await fetch('/api/refresh', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({secret: 'nieruchomosci2026'})
+    });
+    const data = await r.json();
+    btn.textContent = data.status === 'started' ? '⟳ Scraper uruchomiony (~5 min)' : '⟳ Już działa...';
+    setTimeout(() => { btn.textContent = '⟳ Odśwież teraz'; btn.classList.remove('loading'); }, 3000);
+    // Reload after 5 min
+    setTimeout(loadDeals, 5 * 60 * 1000);
+  } catch(e) {
+    btn.textContent = '⟳ Błąd';
+    btn.classList.remove('loading');
+  }
+}
+
+// Auto-refresh every 30 min
+setInterval(loadDeals, 30 * 60 * 1000);
+
+loadDeals();
+</script>
+</body>
+</html>

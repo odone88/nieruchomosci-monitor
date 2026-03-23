@@ -31,7 +31,7 @@ _last_error = None
 
 
 def run_scraper_bg():
-    """Import and call monitor.main() directly — no subprocess, errors visible in logs."""
+    """Import monitor.main and run it directly."""
     global _scraper_running, _last_run, _last_error
     if _scraper_running:
         log.info("Scraper already running, skipping.")
@@ -39,13 +39,10 @@ def run_scraper_bg():
     _scraper_running = True
     _last_error = None
     try:
-        log.info("Scraper: importing monitor...")
+        log.info("Scraper: starting...")
         sys.path.insert(0, str(BASE_DIR))
-        import importlib
-        import monitor as mon_module
-        importlib.reload(mon_module)   # reload so config changes take effect
-        log.info("Scraper: calling main()...")
-        mon_module.main()
+        from monitor import main as scraper_main
+        scraper_main()
         _last_run = datetime.now().isoformat()
         log.info(f"Scraper: done at {_last_run}")
     except Exception as e:

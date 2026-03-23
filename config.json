@@ -283,9 +283,9 @@
   "min_discount_pct": 15,
   "alert_discount_pct": 25,
   "check_interval_hours": 6,
-  "request_delay_min": 2,
-  "request_delay_max": 5,
-  "max_pages": 3,
+  "request_delay_min": 0.5,
+  "request_delay_max": 1.5,
+  "max_pages": 2,
   "keywords_pl": [
     "pilne",
     "okazja",

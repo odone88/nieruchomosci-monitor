@@ -1,6 +1,7 @@
 *.pyc
 __pycache__/
 deals.json
+!deals_seed.json
 deals.log
 history.json
 deals.html

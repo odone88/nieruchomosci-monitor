@@ -15,7 +15,14 @@ from flask import Flask, jsonify, render_template, request, abort
 
 BASE_DIR = Path(__file__).resolve().parent
 DEALS_JSON = BASE_DIR / "deals.json"
+DEALS_SEED = BASE_DIR / "deals_seed.json"
 CONFIG_PATH = BASE_DIR / "config.json"
+
+# On cold start: copy seed data so page shows something immediately
+if not DEALS_JSON.exists() and DEALS_SEED.exists():
+    import shutil
+    shutil.copy(DEALS_SEED, DEALS_JSON)
+    logging.getLogger("app").info("Cold start: loaded deals_seed.json")
 
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger("app")

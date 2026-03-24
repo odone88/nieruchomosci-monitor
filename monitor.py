@@ -785,24 +785,42 @@ PISOS_URLS = {
     "valencia": "https://www.pisos.com/venta/pisos-valencia/",
 }
 
+_PISOS_USER_AGENTS = [
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36",
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:122.0) Gecko/20100101 Firefox/122.0",
+    "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36",
+]
+
 def scrape_pisos(market_key: str) -> list[dict]:
-    """Scrape pisos.com — confirmed SSR, 30 listings/page, data-ad-price attribute."""
+    """Scrape pisos.com — confirmed SSR, 30 listings/page, data-ad-price attribute.
+    Rotates User-Agents to reduce fingerprint detection on cloud IPs.
+    """
     base_url = PISOS_URLS.get(market_key)
     if not base_url:
         return []
     deals = []
+    ua = random.choice(_PISOS_USER_AGENTS)
     headers = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/131.0.0.0 Safari/537.36",
-        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-        "Accept-Language": "es-ES,es;q=0.9,en;q=0.8",
+        "User-Agent": ua,
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
+        "Accept-Language": "es-ES,es;q=0.9,en-US;q=0.7,en;q=0.5",
+        "Accept-Encoding": "gzip, deflate, br",
+        "Referer": "https://www.google.es/",
+        "Sec-Fetch-Dest": "document",
+        "Sec-Fetch-Mode": "navigate",
+        "Sec-Fetch-Site": "cross-site",
+        "Upgrade-Insecure-Requests": "1",
+        "Cache-Control": "max-age=0",
     }
     city_name = market_key.title()
     for page in range(1, 3):
         url = base_url if page == 1 else f"{base_url}{page}/"
-        log.info(f"[Pisos] {market_key} page {page}: {url}")
+        log.info(f"[Pisos] {market_key} page {page}: {url} (UA: {ua[:40]}...)")
         resp = SESSION.get(url, headers=headers, timeout=30)
+        log.info(f"  Pisos HTTP {resp.status_code}, size: {len(resp.text)}")
         if resp.status_code != 200:
-            log.warning(f"  Pisos HTTP {resp.status_code}")
+            log.warning(f"  Pisos blocked/error: first 500 chars: {resp.text[:500]}")
             break
         html = resp.text
         # Each card has data-lnk-href="/comprar/..."

@@ -149,6 +149,25 @@ body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', syste
 .load-more-btn { background: var(--surface2); border: 1px solid var(--border); color: var(--text); padding: 10px 28px; border-radius: 8px; cursor: pointer; font-size: 0.9rem; transition: all 0.15s; }
 .load-more-btn:hover { border-color: var(--blue); color: var(--blue); }
 
+/* Range inputs */
+.range-input { background: var(--surface2); border: 1px solid var(--border); color: var(--text); padding: 6px 10px; border-radius: 8px; font-size: 0.85rem; width: 120px; }
+.range-input:focus { outline: none; border-color: var(--blue); }
+.range-sep { color: var(--text2); font-size: 0.85rem; }
+
+/* Active filters bar */
+.active-filters { display: none; padding: 8px 24px; background: rgba(59,130,246,0.06); border-bottom: 1px solid var(--border); gap: 8px; flex-wrap: wrap; align-items: center; }
+.active-filters.visible { display: flex; }
+.filter-tag { display: inline-flex; align-items: center; gap: 5px; background: rgba(59,130,246,0.15); border: 1px solid rgba(59,130,246,0.3); color: var(--blue); padding: 3px 10px; border-radius: 20px; font-size: 0.78rem; font-weight: 600; }
+.filter-tag button { background: none; border: none; color: var(--blue); cursor: pointer; font-size: 0.9rem; padding: 0; line-height: 1; opacity: 0.7; }
+.filter-tag button:hover { opacity: 1; }
+.clear-all-btn { background: none; border: 1px solid var(--border); color: var(--text2); padding: 3px 10px; border-radius: 20px; font-size: 0.78rem; cursor: pointer; }
+.clear-all-btn:hover { border-color: var(--red); color: var(--red); }
+
+/* Scraper running pulse in header */
+.scraper-running { display: none; align-items: center; gap: 6px; font-size: 0.82rem; color: var(--yellow); }
+.scraper-running.active { display: flex; }
+.scraper-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--yellow); animation: livepulse 1s ease-in-out infinite; }
+
 /* Responsive */
 @media (max-width: 900px) {
   .main { flex-direction: column; }
@@ -178,6 +197,9 @@ body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', syste
   <div class="header-meta">
     <span><span class="live-dot"></span> Aktualizacja co 6h</span>
     <span id="last-update">Ładowanie...</span>
+    <span class="scraper-running" id="scraper-indicator">
+      <span class="scraper-dot"></span> Scraper działa...
+    </span>
     <button class="refresh-btn" id="refresh-btn" onclick="triggerRefresh()">
       ⟳ Odśwież teraz
     </button>
@@ -229,15 +251,28 @@ body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', syste
     <button class="tab" data-type="mieszkanie" onclick="setType('mieszkanie',this)">🏢 Mieszkania</button>
     <button class="tab" data-type="dzialka" onclick="setType('dzialka',this)">🌱 Działki</button>
     <button class="tab" data-type="inwestycyjne" onclick="setType('inwestycyjne',this)">💼 Inwestycyjne</button>
-    <button class="tab" data-type="kamica" onclick="setType('kamica',this)">🏚️ Kamienice</button>
+    <button class="tab" data-type="kamienica" onclick="setType('kamienica',this)">🏚️ Kamienice</button>
   </div>
   <div class="filter-row">
-    <span class="filter-label">Okazja</span>
-    <button class="tab active" data-disc="0" onclick="setDiscount(0,this)">Wszystkie</button>
-    <button class="tab" data-disc="10" onclick="setDiscount(10,this)">-10%+</button>
-    <button class="tab" data-disc="20" onclick="setDiscount(20,this)">-20%+ Okazja</button>
-    <button class="tab mega" data-disc="30" onclick="setDiscount(30,this)">-30%+ MEGA</button>
-    <input type="text" class="search-input" id="search-input" placeholder="🔍 Szukaj adres, słowo kluczowe..." oninput="debouncedFilter()">
+    <span class="filter-label">Rabat</span>
+    <button class="tab active" data-disc="0" onclick="setDiscount(0,this)">Dowolny</button>
+    <button class="tab" data-disc="8" onclick="setDiscount(8,this)">-8%+ Ciekawe</button>
+    <button class="tab" data-disc="15" onclick="setDiscount(15,this)">-15%+ Okazja</button>
+    <button class="tab" data-disc="25" onclick="setDiscount(25,this)">-25%+ Dobra</button>
+    <button class="tab mega" data-disc="30" onclick="setDiscount(30,this)">🔥 -30%+ MEGA</button>
+  </div>
+  <div class="filter-row">
+    <span class="filter-label">Cena</span>
+    <input type="number" class="range-input" id="price-min" placeholder="Min (np. 200000)" oninput="debouncedFilter()" min="0" step="10000">
+    <span class="range-sep">—</span>
+    <input type="number" class="range-input" id="price-max" placeholder="Max (np. 800000)" oninput="debouncedFilter()" min="0" step="10000">
+    <span class="filter-label" style="margin-left:16px">Metraż</span>
+    <input type="number" class="range-input" id="area-min" placeholder="Min m² (np. 40)" oninput="debouncedFilter()" min="0" style="width:110px">
+    <span class="range-sep">—</span>
+    <input type="number" class="range-input" id="area-max" placeholder="Max m²" oninput="debouncedFilter()" min="0" style="width:110px">
+  </div>
+  <div class="filter-row">
+    <input type="text" class="search-input" id="search-input" placeholder="🔍 Szukaj adres, słowo kluczowe..." oninput="debouncedFilter()" style="flex:1;width:auto;min-width:200px">
     <select class="sort-select" id="sort-select" onchange="filterDeals()">
       <option value="score">Sortuj: Score</option>
       <option value="discount">Sortuj: Rabat %</option>
@@ -247,6 +282,9 @@ body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', syste
     </select>
   </div>
 </div>
+
+<!-- Active filters summary bar -->
+<div class="active-filters" id="active-filters-bar"></div>
 
 <div class="main">
       <aside class="sidebar" id="sidebar">
@@ -435,6 +473,7 @@ let currentDiscount = 0;
 let currentEuMarket = 'all';
 let visibleCount = 50;
 const PAGE_SIZE = 50;
+let _scraperRunning = false;
 
 // Debounce — search input fires max once per 200ms
 let _searchTimer = null;
@@ -531,6 +570,10 @@ function updateStats(data) {
   document.getElementById('stat-good').textContent = deals.filter(d => (d.discount_pct || 0) >= 15 && (d.discount_pct || 0) < 25).length;
   document.getElementById('stat-new').textContent = deals.filter(d => isNew(d)).length;
   document.getElementById('stat-eu').textContent = deals.filter(d => MARKET_GROUPS.europa.includes(d.market)).length;
+  // Scraper indicator
+  _scraperRunning = data.scraper_running || false;
+  const ind = document.getElementById('scraper-indicator');
+  if (ind) ind.classList.toggle('active', _scraperRunning);
 }
 
 function updateMarketTabCounts() {
@@ -605,6 +648,10 @@ function filterDeals() {
   const search = document.getElementById('search-input').value.toLowerCase();
   const sort = document.getElementById('sort-select').value;
   const interestingOnly = document.getElementById('interesting-toggle').checked;
+  const priceMin = parseFloat(document.getElementById('price-min').value) || 0;
+  const priceMax = parseFloat(document.getElementById('price-max').value) || 0;
+  const areaMin = parseFloat(document.getElementById('area-min').value) || 0;
+  const areaMax = parseFloat(document.getElementById('area-max').value) || 0;
 
   // Market filter
   if (currentMarket !== 'all') {
@@ -631,6 +678,14 @@ function filterDeals() {
     deals = deals.filter(d => (d.discount_pct || 0) >= 8 || (d.okazja_score || 0) > 0);
   }
 
+  // Price range filter
+  if (priceMin > 0) deals = deals.filter(d => (d.price || 0) >= priceMin);
+  if (priceMax > 0) deals = deals.filter(d => (d.price || 0) <= priceMax);
+
+  // Area range filter
+  if (areaMin > 0) deals = deals.filter(d => (d.area || 0) >= areaMin);
+  if (areaMax > 0) deals = deals.filter(d => (d.area || 0) <= areaMax);
+
   // Search
   if (search) {
     deals = deals.filter(d =>
@@ -653,7 +708,67 @@ function filterDeals() {
     ? `Wyświetlam ${shown} z ${total} ofert`
     : `${total} ofert`;
 
+  updateActiveFilters(priceMin, priceMax, areaMin, areaMax, search);
   renderDeals(deals.slice(0, visibleCount), total);
+}
+
+function updateActiveFilters(priceMin, priceMax, areaMin, areaMax, search) {
+  const bar = document.getElementById('active-filters-bar');
+  const tags = [];
+
+  if (currentMarket !== 'all') {
+    const labels = {krakow:'Kraków',warszawa:'Warszawa',wroclaw:'Wrocław',gdansk:'Gdańsk',europa:'Europa'};
+    tags.push({label: labels[currentMarket]||currentMarket, clear: () => {
+      currentMarket='all';
+      document.querySelectorAll('[data-market]').forEach(b=>b.classList.remove('active'));
+      document.querySelector('[data-market="all"]').classList.add('active');
+      document.getElementById('eu-city-row').style.display='none';
+      currentEuMarket='all';
+      filterDeals();
+    }});
+  }
+  if (currentEuMarket !== 'all') tags.push({label: currentEuMarket, clear: () => { currentEuMarket='all'; document.querySelectorAll('[data-eumarket]').forEach(b=>b.classList.remove('active')); document.querySelector('[data-eumarket="all"]').classList.add('active'); filterDeals(); }});
+  if (currentType !== 'all') tags.push({label: currentType, clear: () => { currentType='all'; document.querySelectorAll('[data-type]').forEach(b=>b.classList.remove('active')); document.querySelector('[data-type="all"]').classList.add('active'); filterDeals(); }});
+  if (currentDiscount > 0) tags.push({label: `-${currentDiscount}%+`, clear: () => { currentDiscount=0; document.querySelectorAll('[data-disc]').forEach(b=>b.classList.remove('active')); document.querySelector('[data-disc="0"]').classList.add('active'); filterDeals(); }});
+  if (priceMin > 0) tags.push({label: `≥ ${priceMin.toLocaleString('pl-PL')}`, clear: () => { document.getElementById('price-min').value=''; filterDeals(); }});
+  if (priceMax > 0) tags.push({label: `≤ ${priceMax.toLocaleString('pl-PL')}`, clear: () => { document.getElementById('price-max').value=''; filterDeals(); }});
+  if (areaMin > 0) tags.push({label: `≥ ${areaMin}m²`, clear: () => { document.getElementById('area-min').value=''; filterDeals(); }});
+  if (areaMax > 0) tags.push({label: `≤ ${areaMax}m²`, clear: () => { document.getElementById('area-max').value=''; filterDeals(); }});
+  if (search) tags.push({label: `"${search}"`, clear: () => { document.getElementById('search-input').value=''; filterDeals(); }});
+
+  if (!tags.length) { bar.innerHTML=''; bar.classList.remove('visible'); return; }
+
+  bar.classList.add('visible');
+  bar.innerHTML = '<span style="font-size:0.78rem;color:var(--text2);margin-right:4px">Filtry:</span>' +
+    tags.map((t,i) => `<span class="filter-tag">${t.label} <button onclick="_clearFilter(${i})" title="Usuń filtr">×</button></span>`).join('') +
+    `<button class="clear-all-btn" onclick="clearAllFilters()">Wyczyść wszystko</button>`;
+  bar._tags = tags;
+}
+
+function _clearFilter(i) {
+  const bar = document.getElementById('active-filters-bar');
+  if (bar._tags && bar._tags[i]) bar._tags[i].clear();
+}
+
+function clearAllFilters() {
+  currentMarket='all'; currentEuMarket='all'; currentType='all'; currentDiscount=0;
+  document.querySelectorAll('[data-market]').forEach(b=>b.classList.remove('active'));
+  document.querySelector('[data-market="all"]').classList.add('active');
+  document.querySelectorAll('[data-eumarket]').forEach(b=>b.classList.remove('active'));
+  document.querySelector('[data-eumarket="all"]').classList.add('active');
+  document.querySelectorAll('[data-type]').forEach(b=>b.classList.remove('active'));
+  document.querySelector('[data-type="all"]').classList.add('active');
+  document.querySelectorAll('[data-disc]').forEach(b=>b.classList.remove('active'));
+  document.querySelector('[data-disc="0"]').classList.add('active');
+  document.getElementById('eu-city-row').style.display='none';
+  document.getElementById('price-min').value='';
+  document.getElementById('price-max').value='';
+  document.getElementById('area-min').value='';
+  document.getElementById('area-max').value='';
+  document.getElementById('search-input').value='';
+  document.getElementById('interesting-toggle').checked=false;
+  visibleCount = PAGE_SIZE;
+  filterDeals();
 }
 
 function renderDeals(deals, totalFiltered) {

@@ -197,6 +197,7 @@ body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', syste
   <div class="header-meta">
     <span><span class="live-dot"></span> Aktualizacja co 6h</span>
     <span id="last-update">Ładowanie...</span>
+    <button id="currency-toggle" onclick="toggleCurrency()" title="Przełącz EUR ↔ PLN" style="background:var(--surface2);border:1px solid var(--border);color:var(--text2);padding:5px 12px;border-radius:8px;cursor:pointer;font-size:0.82rem;white-space:nowrap">💱 EUR</button>
     <span class="scraper-running" id="scraper-indicator">
       <span class="scraper-dot"></span> Scraper działa...
     </span>
@@ -244,6 +245,8 @@ body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', syste
     <button class="tab" data-eumarket="bucharest" onclick="setEuMarket('bucharest',this)">🇷🇴 Bukareszt</button>
     <button class="tab" data-eumarket="sofia" onclick="setEuMarket('sofia',this)">🇧🇬 Sofia</button>
     <button class="tab" data-eumarket="athens" onclick="setEuMarket('athens',this)">🇬🇷 Ateny</button>
+    <button class="tab" data-eumarket="porto" onclick="setEuMarket('porto',this)">🇵🇹 Porto</button>
+    <button class="tab" data-eumarket="lisbon" onclick="setEuMarket('lisbon',this)">🇵🇹 Lizbona</button>
   </div>
   <div class="filter-row">
     <span class="filter-label">Typ</span>
@@ -443,6 +446,46 @@ body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', syste
       <div>&#127466;&#127480; <strong>Hiszpania</strong> &mdash; &#10007; zlikwidowane 3 IV 2025</div>
       <div style="font-size:0.72rem;margin-top:6px;opacity:0.7">Polak (obywatel EU) nie potrzebuje Golden Visa do zamieszkania w żadnym kraju EU.</div>
     </div>
+
+    <!-- Yield calculator -->
+    <div style="border-top:1px solid var(--border);margin:12px 0 10px;padding-top:12px">
+      <div class="guide-title" style="margin-bottom:10px">🧮 Kalkulator Yield</div>
+    </div>
+    <div style="background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:12px;font-size:0.82rem">
+      <div style="margin-bottom:8px">
+        <label style="display:block;color:var(--text2);margin-bottom:3px;font-size:0.75rem">Cena zakupu (EUR)</label>
+        <input type="number" id="calc-price" placeholder="np. 180000" oninput="calcYield()"
+          style="width:100%;background:var(--surface);border:1px solid var(--border);color:var(--text);padding:6px 10px;border-radius:6px;font-size:0.85rem">
+      </div>
+      <div style="margin-bottom:8px">
+        <label style="display:block;color:var(--text2);margin-bottom:3px;font-size:0.75rem">Czynsz miesięczny (EUR)</label>
+        <input type="number" id="calc-rent" placeholder="np. 900" oninput="calcYield()"
+          style="width:100%;background:var(--surface);border:1px solid var(--border);color:var(--text);padding:6px 10px;border-radius:6px;font-size:0.85rem">
+      </div>
+      <div style="margin-bottom:8px">
+        <label style="display:block;color:var(--text2);margin-bottom:3px;font-size:0.75rem">Koszty roczne (podatki, zarządzanie, EUR)</label>
+        <input type="number" id="calc-costs" placeholder="np. 2000" oninput="calcYield()" value="2000"
+          style="width:100%;background:var(--surface);border:1px solid var(--border);color:var(--text);padding:6px 10px;border-radius:6px;font-size:0.85rem">
+      </div>
+      <div id="calc-result" style="background:rgba(59,130,246,0.08);border:1px solid rgba(59,130,246,0.2);border-radius:8px;padding:10px;display:none">
+        <div style="display:flex;justify-content:space-between;margin-bottom:4px">
+          <span style="color:var(--text2)">Yield brutto</span>
+          <strong id="calc-gross" style="color:var(--green)">—</strong>
+        </div>
+        <div style="display:flex;justify-content:space-between;margin-bottom:4px">
+          <span style="color:var(--text2)">Yield netto</span>
+          <strong id="calc-net" style="color:var(--yellow)">—</strong>
+        </div>
+        <div style="display:flex;justify-content:space-between;margin-bottom:4px">
+          <span style="color:var(--text2)">Roczny przychód</span>
+          <strong id="calc-annual" style="color:var(--text)">—</strong>
+        </div>
+        <div style="display:flex;justify-content:space-between">
+          <span style="color:var(--text2)">Zwrot kapitału</span>
+          <strong id="calc-payback" style="color:var(--text)">—</strong>
+        </div>
+      </div>
+    </div>
   </aside>
 
   <div class="content">
@@ -477,15 +520,47 @@ let _scraperRunning = false;
 
 // EUR/PLN rate — fetched once from frankfurter.dev, cached
 let eurPlnRate = null;
+let showInPln = false;
+
 async function fetchEurPln() {
   try {
     const r = await fetch('https://api.frankfurter.dev/latest?from=EUR&to=PLN');
     if (!r.ok) return;
     const d = await r.json();
     eurPlnRate = d.rates && d.rates.PLN ? d.rates.PLN : null;
-  } catch(e) { /* silent — nice-to-have, not critical */ }
+    if (eurPlnRate) {
+      const btn = document.getElementById('currency-toggle');
+      if (btn) btn.title = `1 EUR = ${eurPlnRate.toFixed(2)} PLN`;
+    }
+  } catch(e) { /* silent */ }
 }
 fetchEurPln();
+
+function toggleCurrency() {
+  showInPln = !showInPln;
+  const btn = document.getElementById('currency-toggle');
+  if (btn) btn.textContent = showInPln ? '💱 PLN' : '💱 EUR';
+  filterDeals();
+}
+
+// Yield calculator
+function calcYield() {
+  const price = parseFloat(document.getElementById('calc-price').value) || 0;
+  const rent = parseFloat(document.getElementById('calc-rent').value) || 0;
+  const costs = parseFloat(document.getElementById('calc-costs').value) || 0;
+  const result = document.getElementById('calc-result');
+  if (price <= 0 || rent <= 0) { result.style.display='none'; return; }
+  const annualRent = rent * 12;
+  const annualNet = annualRent - costs;
+  const gross = (annualRent / price * 100);
+  const net = (annualNet / price * 100);
+  const payback = net > 0 ? (100 / net).toFixed(1) : '∞';
+  document.getElementById('calc-gross').textContent = gross.toFixed(2) + '%';
+  document.getElementById('calc-net').textContent = net.toFixed(2) + '%';
+  document.getElementById('calc-annual').textContent = annualRent.toLocaleString('pl-PL') + ' EUR';
+  document.getElementById('calc-payback').textContent = payback + ' lat';
+  result.style.display = 'block';
+}
 
 // Debounce — search input fires max once per 200ms
 let _searchTimer = null;
@@ -500,7 +575,7 @@ const MARKET_GROUPS = {
   warszawa: ['warszawa_centrum','warszawa_inne','warszawa_inwestycyjne','warszawa_dzialki'],
   wroclaw:  ['wroclaw_centrum'],
   gdansk:   ['gdansk_centrum'],
-  europa:   ['valencia','athens','bucharest','barcelona','lizbona','alicante','malaga','sofia','berlin','london','munich','amsterdam','dublin','tallinn','milan'],
+  europa:   ['valencia','athens','bucharest','barcelona','lizbona','lisbon','porto','alicante','malaga','sofia','berlin','london','munich','amsterdam','dublin','tallinn','milan'],
 };
 
 // 24-hour cutoff for "Nowe" badge
@@ -822,15 +897,26 @@ function renderDeals(deals, totalFiltered) {
       ? `<div style="font-size:0.78rem;font-weight:700;color:var(--blue);margin-bottom:4px;letter-spacing:0.02em">${flag} ${marketLabel} · ${(d.location||'').split(',')[0]}</div>`
       : '';
 
-    const priceFormatted = (d.price||0).toLocaleString('pl-PL');
-    const pm2Formatted = (d.price_m2||0).toLocaleString('pl-PL');
-
-    // PLN equivalent for EU deals (EUR only)
+    // Currency display: toggle EUR↔PLN for EU deals
+    let displayPrice = d.price || 0;
+    let displayPm2 = d.price_m2 || 0;
+    let displayCurrency = currency;
     let plnEquiv = '';
+
     if (isEu && currency === 'EUR' && eurPlnRate && d.price > 0) {
       const plnVal = Math.round(d.price * eurPlnRate / 1000) * 1000;
-      plnEquiv = `<span style="font-size:0.8rem;color:var(--text2);margin-left:4px">≈ ${plnVal.toLocaleString('pl-PL')} PLN</span>`;
+      const plnPm2 = Math.round((d.price_m2 || 0) * eurPlnRate / 100) * 100;
+      if (showInPln) {
+        displayPrice = plnVal;
+        displayPm2 = plnPm2;
+        displayCurrency = 'PLN';
+        plnEquiv = `<span style="font-size:0.78rem;color:var(--text2)">≈ ${(d.price||0).toLocaleString('pl-PL')} EUR</span>`;
+      } else {
+        plnEquiv = `<span style="font-size:0.78rem;color:var(--text2)">≈ ${plnVal.toLocaleString('pl-PL')} PLN</span>`;
+      }
     }
+    const priceFormatted = displayPrice.toLocaleString('pl-PL');
+    const pm2Formatted = displayPm2.toLocaleString('pl-PL');
 
     const card = document.createElement('div');
     card.className = cardClass;
@@ -870,7 +956,8 @@ function renderDeals(deals, totalFiltered) {
         <div class="meta-row">
           <span class="location">${(d.location||'—').replace(/</g,'&lt;')}</span>
           <span>📐 ${(d.area||0).toFixed(0)} m²</span>
-          <span>🏷️ ${(d.source||'').toUpperCase()}</span>
+          ${d.rooms > 0 ? `<span>🛏 ${d.rooms} pok.</span>` : ''}
+          <span style="opacity:0.6">· ${(d.source||'').toUpperCase()}</span>
         </div>
         ${reasons}
         ${justif}

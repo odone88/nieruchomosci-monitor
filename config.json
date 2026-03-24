@@ -163,121 +163,134 @@
         "otodom"
       ],
       "city_filter": [],
-      "type": "kamica",
+      "type": "kamienica",
       "flag": "🏚️"
     },
     "valencia": {
       "enabled": true,
       "label": "Valencia 🇪🇸",
-      "max_price_m2": 2500,
+      "max_price_m2": 5500,
+      "avg_price_m2": 3200,
       "currency": "EUR",
-      "sources": [
-        "pisos"
-      ],
-      "city_filter": [
-        "Valencia",
-        "València"
-      ],
+      "sources": ["pisos", "kyero"],
+      "city_filter": ["Valencia", "València"],
       "type": "mieszkanie",
       "flag": "🇪🇸",
       "roi_rating": 5,
-      "roi_note": "Najlepsza cena/jakość w Europie Zachodniej. ~1500-2500 EUR/m². Yield 5-8%. 3. miasto Hiszpanii pod turystyką."
+      "roi_note": "Yield 6,2% poza centrum. ~2000-3500 EUR/m². 3. miasto Hiszpanii. UWAGA: sprawdź mapę SNCZI przed zakupem (powódź DANA X 2024 — południe).",
+      "gross_yield_pct": 6.2
     },
     "athens": {
       "enabled": true,
       "label": "Ateny 🇬🇷",
-      "max_price_m2": 3000,
+      "max_price_m2": 5000,
+      "avg_price_m2": 3551,
       "currency": "EUR",
       "sources": [],
-      "city_filter": [
-        "Athens",
-        "Ateny",
-        "Αθήνα"
-      ],
+      "city_filter": ["Athens", "Ateny", "Αθήνα"],
       "type": "mieszkanie",
       "flag": "🇬🇷",
       "roi_rating": 4,
-      "roi_note": "Yield 3,8% centrum - slaby. Golden Visa aktywne: 800k/400k/250k EUR. Transfer tax 3%. Sens dla GV lub aprecjacji."
+      "roi_note": "Yield 3,8% centrum - słaby. Golden Visa aktywne: 800k/400k/250k EUR. Transfer tax 3%. Sens dla GV lub aprecjacji.",
+      "gross_yield_pct": 3.8
     },
     "bucharest": {
       "enabled": true,
       "label": "Bukareszt 🇷🇴",
-      "max_price_m2": 2000,
+      "max_price_m2": 5000,
+      "avg_price_m2": 3800,
       "currency": "EUR",
-      "sources": [
-        "storia_ro"
-      ],
-      "city_filter": [
-        "Bucharest",
-        "București"
-      ],
+      "sources": ["storia_ro"],
+      "city_filter": ["Bucharest", "București"],
       "type": "mieszkanie",
       "flag": "🇷🇴",
       "roi_rating": 4,
-      "roi_note": "Yield 4,1% centrum (nie 6-8% jak podawano). Kredyty 7,14%. 10% flat tax. Waluta LEU nie EUR - ryzyko kursowe."
+      "roi_note": "Yield 4,1% centrum. Kredyty 7,14%. 10% flat tax. Waluta LEU nie EUR — ryzyko kursowe.",
+      "gross_yield_pct": 4.1
     },
     "berlin": {
       "enabled": false,
       "label": "Berlin 🇩🇪",
-      "max_price_m2": 5000,
+      "max_price_m2": 7000,
+      "avg_price_m2": 5000,
       "currency": "EUR",
       "sources": [],
-      "city_filter": [
-        "Berlin"
-      ],
+      "city_filter": ["Berlin"],
       "type": "mieszkanie",
       "flag": "🇩🇪",
       "roi_rating": 2,
-      "roi_note": "OMIJAJ. 4000-7000 EUR/m². Kontrola czynszów (Mietspiegel) → yield 2-3%. Ryzyko regulacyjne. Przepełniony rynek."
+      "roi_note": "OMIJAJ. 4000-7000 EUR/m². Kontrola czynszów (Mietspiegel) → yield 2-3%.",
+      "gross_yield_pct": 2.5
     },
     "alicante": {
       "enabled": true,
       "label": "Alicante ES",
-      "max_price_m2": 3500,
+      "max_price_m2": 5000,
+      "avg_price_m2": 3402,
       "currency": "EUR",
-      "sources": [
-        "pisos"
-      ],
-      "city_filter": [
-        "Alicante",
-        "Alacant"
-      ],
+      "sources": ["pisos", "kyero"],
+      "city_filter": ["Alicante", "Alacant"],
       "type": "mieszkanie",
       "flag": "🇪🇸",
       "roi_rating": 5,
-      "roi_note": "Najwyzszy yield w Europie Zachodniej: 8,7% poza centrum. 3402 EUR/m2. Silny rynek turystyczny. ITP 10%, IRNR 19%."
+      "roi_note": "Najwyższy yield w Europie Zachodniej: 8,7% poza centrum. 3402 EUR/m². Silny rynek turystyczny. ITP 10%, IRNR 19%.",
+      "gross_yield_pct": 8.7
     },
     "malaga": {
       "enabled": true,
-      "label": "Malaga ES",
-      "max_price_m2": 4500,
+      "label": "Málaga ES",
+      "max_price_m2": 7000,
+      "avg_price_m2": 4422,
       "currency": "EUR",
-      "sources": [
-        "pisos"
-      ],
-      "city_filter": [
-        "Malaga"
-      ],
+      "sources": ["pisos", "kyero"],
+      "city_filter": ["Malaga", "Málaga"],
       "type": "mieszkanie",
       "flag": "🇪🇸",
       "roi_rating": 4,
-      "roi_note": "Najszybciej rosnace miasto Hiszpanii. Yield 7,1% poza centrum. Hub IT i nomadow. ITP 7% (Andaluzja)."
+      "roi_note": "Najszybciej rosnące miasto Hiszpanii. Yield 7,1% poza centrum. Hub IT i nomadów. ITP 7% (Andaluzja).",
+      "gross_yield_pct": 7.1
     },
     "sofia": {
       "enabled": true,
       "label": "Sofia BG",
-      "max_price_m2": 3700,
+      "max_price_m2": 5000,
+      "avg_price_m2": 3642,
       "currency": "EUR",
-      "sources": [
-        "imot_bg"
-      ],
-      "city_filter": [
-        "Sofia"
-      ],
+      "sources": ["imot_bg"],
+      "city_filter": ["Sofia"],
       "type": "mieszkanie",
-      "flag": "",
+      "flag": "🇧🇬",
       "roi_rating": 3,
-      "roi_note": "Najtansza stolica EU z EUR od 2024. Yield 4,4%. 10% flat tax od najmu. Hub IT wschod Europy."
+      "roi_note": "Najtańsza stolica EU z EUR od 2024. Yield 4,4%. 10% flat tax od najmu. Hub IT wschód Europy.",
+      "gross_yield_pct": 4.4
+    },
+    "porto": {
+      "enabled": true,
+      "label": "Porto 🇵🇹",
+      "max_price_m2": 7000,
+      "avg_price_m2": 4460,
+      "currency": "EUR",
+      "sources": ["imovirtual"],
+      "city_filter": ["Porto", "Oporto"],
+      "type": "mieszkanie",
+      "flag": "🇵🇹",
+      "roi_rating": 4,
+      "roi_note": "Yield 5,3% centrum. Tańszy niż Lizbona o ~30%. STR: nowe licencje AL zamrożone w obszarach historycznych. Podatek od najmu 25% (nierezydent).",
+      "gross_yield_pct": 5.3
+    },
+    "lisbon": {
+      "enabled": true,
+      "label": "Lizbona 🇵🇹",
+      "max_price_m2": 10000,
+      "avg_price_m2": 5800,
+      "currency": "EUR",
+      "sources": ["imovirtual"],
+      "city_filter": ["Lisboa", "Lisbon"],
+      "type": "mieszkanie",
+      "flag": "🇵🇹",
+      "roi_rating": 3,
+      "roi_note": "Yield 4,5% centrum. Droższa niż Porto. Brak Golden Visa dla nieruchomości od 2024. Popularna wśród Polaków.",
+      "gross_yield_pct": 4.5
     }
   },
   "min_discount_pct": 15,

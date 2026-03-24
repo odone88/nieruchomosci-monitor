@@ -115,6 +115,7 @@ def make_deal(
     market: str,
     image_url: str = "",
     description: str = "",
+    rooms: int = 0,
 ) -> dict:
     deal_id = hashlib.md5(url.encode()).hexdigest()[:12]
     return {
@@ -129,6 +130,7 @@ def make_deal(
         "market": market,
         "image_url": image_url,
         "description": description,
+        "rooms": rooms,
         "found_at": datetime.now().isoformat(),
         "okazja_score": 0,
         "okazja_reasons": [],
@@ -148,24 +150,40 @@ def city_matches(city_name: str, market_key: str) -> bool:
 # Score deals
 # ---------------------------------------------------------------------------
 def score_deal(deal: dict, market_cfg: dict) -> dict:
-    """Ocena okazji: im wyższy score tym lepszy deal."""
+    """Ocena okazji: im wyższy score tym lepszy deal.
+
+    Dla rynków PL: porównanie z max_price_m2 (historyczny limit cenowy).
+    Dla rynków EU (EUR): porównanie z avg_price_m2 (średnia rynkowa) jeśli dostępna.
+    """
     score = 0
     reasons = []
-    max_price = market_cfg["max_price_m2"]
+    currency = market_cfg.get("currency", "PLN")
+    max_price = market_cfg.get("max_price_m2", 0)
+    avg_price = market_cfg.get("avg_price_m2", 0)
 
-    if deal["price_m2"] > 0 and max_price > 0:
-        discount_pct = (1 - deal["price_m2"] / max_price) * 100
+    # Reference price: avg for EU markets (vs average), max for PL (vs ceiling)
+    # EU deals: poniżej avg = okazja, bo nie ma historii cen per listing
+    if currency == "EUR" and avg_price > 0:
+        ref_price = avg_price
+    else:
+        ref_price = max_price
+
+    if deal["price_m2"] > 0 and ref_price > 0:
+        discount_pct = (1 - deal["price_m2"] / ref_price) * 100
         deal["discount_pct"] = round(discount_pct, 1)
 
-        if discount_pct >= CFG.get("alert_discount_pct", 30):
+        if discount_pct >= CFG.get("alert_discount_pct", 25):
             score += 50
-            reasons.append(f"MEGA OKAZJA: {discount_pct:.0f}% poniżej rynku")
-        elif discount_pct >= CFG.get("min_discount_pct", 20):
+            reasons.append(f"MEGA OKAZJA: {discount_pct:.0f}% poniżej średniej rynkowej")
+        elif discount_pct >= CFG.get("min_discount_pct", 15):
             score += 30
-            reasons.append(f"Dobra okazja: {discount_pct:.0f}% poniżej rynku")
-        elif discount_pct >= 10:
-            score += 10
-            reasons.append(f"Poniżej rynku: {discount_pct:.0f}%")
+            reasons.append(f"Dobra okazja: {discount_pct:.0f}% poniżej średniej")
+        elif discount_pct >= 8:
+            score += 15
+            reasons.append(f"Poniżej średniej: {discount_pct:.0f}%")
+        elif discount_pct >= 3:
+            score += 5
+            reasons.append(f"Lekko poniżej rynku: {discount_pct:.0f}%")
     else:
         deal["discount_pct"] = 0
 
@@ -176,11 +194,19 @@ def score_deal(deal: dict, market_cfg: dict) -> dict:
         + CFG.get("keywords_en", [])
         + CFG.get("keywords_es", [])
         + CFG.get("keywords_pt", [])
+        + CFG.get("keywords_ro", [])
     )
     matched_kw = [kw for kw in all_keywords if kw in text]
     if matched_kw:
         score += 5 * len(matched_kw)
         reasons.append(f"Słowa kluczowe: {', '.join(matched_kw[:5])}")
+
+    # Bonus: large area is more rentable
+    if deal.get("area", 0) >= 80:
+        score += 5
+    # Bonus: rooms count — 2+ rooms are more rentable
+    if deal.get("rooms", 0) >= 2:
+        score += 5
 
     deal["okazja_score"] = score
     deal["okazja_reasons"] = reasons
@@ -193,39 +219,61 @@ def generate_justification(deal: dict, market_cfg: dict) -> str:
     discount = deal.get("discount_pct", 0)
     price_m2 = deal.get("price_m2", 0)
     area = deal.get("area", 0)
-    price = deal.get("price", 0)
+    rooms = deal.get("rooms", 0)
     currency = market_cfg.get("currency", "PLN")
-    reasons = deal.get("okazja_reasons", [])
+    avg_price = market_cfg.get("avg_price_m2", 0)
+    gross_yield = market_cfg.get("gross_yield_pct", 0)
 
+    # Price vs market reference
     if discount >= 25:
-        parts.append(f"Cena {discount:.0f}% poniżej maksimum rynkowego dla tej lokalizacji — to znaczące odchylenie sugerujące presję sprzedażową lub ukryty potencjał.")
+        ref = "średniej rynkowej" if currency == "EUR" else "maksimum rynkowego"
+        parts.append(f"Cena {discount:.0f}% poniżej {ref} — znaczące odchylenie sugerujące presję sprzedażową lub ukryty potencjał.")
     elif discount >= 15:
-        parts.append(f"Cena {discount:.0f}% poniżej typowych stawek rynkowych — solidny margines na negocjacje lub natychmiastowy zysk na odsprzedaży.")
+        parts.append(f"Cena {discount:.0f}% poniżej typowych stawek — solidny margines na negocjacje.")
+    elif discount >= 8:
+        parts.append(f"Cena {discount:.0f}% poniżej rynku — oferta konkurencyjna w tym segmencie.")
 
-    if area > 0 and price_m2 > 0:
+    # EUR market context: yield potential
+    if currency == "EUR" and gross_yield > 0 and deal.get("price", 0) > 0:
+        # Estimate annual rent based on market yield and purchase price
+        annual_rent = deal["price"] * gross_yield / 100
+        monthly_rent = annual_rent / 12
+        parts.append(f"Rynek {market_cfg.get('label','')}: szacowany czynsz ~{monthly_rent:.0f} EUR/mies. (yield brutto {gross_yield}%).")
+
+    # Price per m² context
+    if price_m2 > 0:
         if currency == "PLN" and price_m2 < 7000:
-            parts.append(f"Stawka {price_m2:,.0f} PLN/m² należy do najtańszych w segmencie.")
-        elif currency == "EUR" and price_m2 < 1500:
-            parts.append(f"Stawka {price_m2:,.0f} EUR/m² to poziom pre-boomowy — rzadko spotykany.")
+            parts.append(f"Stawka {price_m2:,.0f} PLN/m² to poziom poniżej średniej dla dużych miast.")
+        elif currency == "EUR" and avg_price > 0:
+            if price_m2 < avg_price * 0.75:
+                parts.append(f"{price_m2:,.0f} EUR/m² — znacznie poniżej średniej {avg_price:,.0f} EUR/m² dla miasta.")
+            elif price_m2 < avg_price * 0.9:
+                parts.append(f"{price_m2:,.0f} EUR/m² vs. śr. {avg_price:,.0f} EUR/m² w mieście.")
 
-    if area >= 70:
-        parts.append(f"Duży metraż ({area:.0f} m²) daje elastyczność: można podzielić na 2 lokale lub wynająć pokojami.")
+    # Area bonus
+    if area >= 80:
+        parts.append(f"Duży metraż ({area:.0f} m²) — możliwość wynajmu pokojami lub podziału.")
+    elif area >= 50 and rooms >= 2:
+        parts.append(f"{area:.0f} m², {rooms} pokoje — dobry stosunek dla najmu długoterminowego.")
 
+    # Keyword signals
     kw_text = (deal.get("title", "") + " " + deal.get("description", "")).lower()
     if "komornik" in kw_text or "egzekucja" in kw_text or "licytacja" in kw_text:
-        parts.append("Sprzedaż egzekucyjna/komornicza — ceny typowo 20-40% poniżej rynku, ale wymaga due diligence prawnego.")
-    elif "pilne" in kw_text or "szybka sprzedaż" in kw_text or "urgent" in kw_text:
+        parts.append("Sprzedaż egzekucyjna/komornicza — ceny typowo 20-40% poniżej rynku. Wymaga due diligence prawnego.")
+    elif "pilne" in kw_text or "szybka sprzedaż" in kw_text or "urgente" in kw_text or "urgent" in kw_text:
         parts.append("Pilna sprzedaż — właściciel pod presją czasową, znaczny margines negocjacyjny.")
     elif "przetarg" in kw_text or "auction" in kw_text or "subasta" in kw_text:
-        parts.append("Oferta przetargowa — często 15-30% poniżej wartości rynkowej przy braku konkurencji.")
+        parts.append("Oferta przetargowa — często 15-30% poniżej wartości rynkowej.")
     elif "bezpośrednio" in kw_text or "właściciel" in kw_text or "particular" in kw_text:
-        parts.append("Sprzedaż bezpośrednia od właściciela — brak prowizji agenta (~3%), możliwość agresywnych negocjacji.")
+        parts.append("Sprzedaż bezpośrednia od właściciela — brak prowizji agenta (~3%).")
+    elif "okazja" in kw_text or "oportunidad" in kw_text or "ocasión" in kw_text:
+        parts.append("Sprzedający sygnalizuje gotowość do negocjacji.")
 
     if not parts:
         if discount > 0:
-            parts.append(f"Cena {discount:.0f}% poniżej maksimum rynkowego — warto sprawdzić stan techniczny i negocjować.")
+            parts.append(f"Cena {discount:.0f}% poniżej rynku — warto sprawdzić i negocjować.")
         else:
-            parts.append("Oferta w przedziale cenowym — porównaj ze średnimi w dzielnicy przed decyzją.")
+            parts.append("Oferta w cenach rynkowych. Porównaj z lokalnymi średnimi przed decyzją.")
 
     return " ".join(parts)
 
@@ -770,15 +818,18 @@ def scrape_pisos(market_key: str) -> list[dict]:
                 price = float(price_m.group(1)) if price_m else 0
                 if price <= 0:
                     continue
-                # Area — "100 m²" in ad-preview__char elements
+                # Area + rooms — "100 m²", "3 hab." in ad-preview__char elements
                 chars = re.findall(r'ad-preview__char[^>]*>([^<]*(?:<[^/][^>]*>[^<]*</[^>]+>)?[^<]*)</p>', chunk)
                 area = 0
+                rooms = 0
                 for c in chars:
                     clean = re.sub(r'<[^>]+>', '', c).strip()
                     m2 = re.search(r'(\d+)\s*m', clean)
-                    if m2:
+                    if m2 and area == 0:
                         area = float(m2.group(1))
-                        break
+                    hab = re.search(r'(\d+)\s*hab', clean)
+                    if hab and rooms == 0:
+                        rooms = int(hab.group(1))
                 # Title
                 title_m = re.search(r'class="ad-preview__title[^"]*"[^>]*>([^<]+)<', chunk)
                 title = title_m.group(1).strip() if title_m else f"Piso en {city_name}"
@@ -790,7 +841,7 @@ def scrape_pisos(market_key: str) -> list[dict]:
                 deal = make_deal(
                     title=title, price=price, area=area, price_m2=price_m2,
                     location=location, url=full_url,
-                    source="pisos", market=market_key,
+                    source="pisos", market=market_key, rooms=rooms,
                 )
                 deals.append(deal)
             except Exception:
@@ -1024,6 +1075,241 @@ def scrape_imobiliare(market_key):
 def scrape_xe_gr(market_key):
     log.warning(f"[xe.gr] Zablokowane przez AWS WAF — pomijam {market_key}")
     return []
+
+
+# ---------------------------------------------------------------------------
+# imovirtual.com scraper (Portugal — Porto, Lisbon)
+# Next.js portal, same __NEXT_DATA__ pattern as storia.ro
+# ---------------------------------------------------------------------------
+IMOVIRTUAL_URLS = {
+    "porto":   "https://www.imovirtual.com/comprar/apartamento/porto/",
+    "lisbon":  "https://www.imovirtual.com/comprar/apartamento/lisboa/",
+}
+
+def scrape_imovirtual(market_key: str) -> list[dict]:
+    """Scrape imovirtual.com via __NEXT_DATA__ JSON (Next.js portal)."""
+    base_url = IMOVIRTUAL_URLS.get(market_key)
+    if not base_url:
+        return []
+    deals = []
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/131.0.0.0 Safari/537.36",
+        "Accept-Language": "pt-PT,pt;q=0.9,en;q=0.8",
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+        "Referer": "https://www.imovirtual.com/",
+    }
+    city_label = "Porto" if market_key == "porto" else "Lisboa"
+    for page in range(1, 3):
+        url = f"{base_url}?page={page}" if page > 1 else base_url
+        log.info(f"[Imovirtual] {market_key} page {page}: {url}")
+        try:
+            resp = SESSION.get(url, headers=headers, timeout=30)
+            if resp.status_code != 200:
+                log.warning(f"  Imovirtual HTTP {resp.status_code}")
+                break
+            soup = BeautifulSoup(resp.text, "html.parser")
+            # Try __NEXT_DATA__ first (Next.js)
+            tag = soup.find("script", {"id": "__NEXT_DATA__"})
+            if tag:
+                data = json.loads(tag.string)
+                # imovirtual Next.js data paths (may vary — try common ones)
+                page_props = data.get("props", {}).get("pageProps", {})
+                items = (
+                    page_props.get("data", {}).get("searchAds", {}).get("items")
+                    or page_props.get("listings", {}).get("items")
+                    or page_props.get("items")
+                    or []
+                )
+                log.info(f"  Imovirtual NEXT_DATA items: {len(items)}")
+                for item in items:
+                    try:
+                        price_obj = item.get("totalPrice") or item.get("price") or {}
+                        if isinstance(price_obj, dict):
+                            price = float(price_obj.get("value", 0) or 0)
+                        else:
+                            price = float(price_obj or 0)
+                        area = float(item.get("areaInSquareMeters") or item.get("area", 0) or 0)
+                        if price <= 0:
+                            continue
+                        slug = item.get("slug") or item.get("id", "")
+                        url_deal = (
+                            f"https://www.imovirtual.com/oferta/{slug}"
+                            if slug else base_url
+                        )
+                        title = item.get("title") or item.get("estate") or f"Apartamento em {city_label}"
+                        loc = item.get("location") or {}
+                        if isinstance(loc, dict):
+                            addr = loc.get("address", {})
+                            city = (addr.get("city") or {}).get("name", city_label) if isinstance(addr, dict) else city_label
+                            district = (addr.get("district") or {}).get("name", "") if isinstance(addr, dict) else ""
+                            location = f"{district}, {city}".strip(", ") if district else city
+                        else:
+                            location = city_label
+                        rooms = int(item.get("roomsNumber") or item.get("rooms", 0) or 0)
+                        img_list = item.get("images") or []
+                        image_url = ""
+                        if img_list and isinstance(img_list[0], dict):
+                            image_url = img_list[0].get("medium") or img_list[0].get("large") or ""
+                        price_m2 = round(price / area, 0) if area > 0 else 0
+                        deal = make_deal(
+                            title=title, price=price, area=area, price_m2=price_m2,
+                            location=location, url=url_deal, source="imovirtual",
+                            market=market_key, image_url=image_url, rooms=rooms,
+                        )
+                        deals.append(deal)
+                    except Exception:
+                        continue
+            else:
+                # Fallback: parse HTML cards
+                log.warning("  Imovirtual: brak __NEXT_DATA__, próbuję HTML")
+                cards = soup.select("[data-testid='listing-item'], article.offer-item, li.offer-item")
+                log.info(f"  Imovirtual HTML cards: {len(cards)}")
+                for card in cards[:30]:
+                    try:
+                        link_el = card.select_one("a[href*='/oferta/']")
+                        if not link_el:
+                            continue
+                        href = link_el.get("href", "")
+                        if not href.startswith("http"):
+                            href = "https://www.imovirtual.com" + href
+                        title_el = card.select_one("h2, h3, .offer-item-title, [data-testid='listing-item-title']")
+                        title = title_el.get_text(strip=True) if title_el else f"Apartamento em {city_label}"
+                        price_el = card.select_one("[data-testid='listing-item-header'] span, .offer-item-price, strong.price")
+                        price_text = price_el.get_text(strip=True) if price_el else ""
+                        price = _parse_price(price_text)
+                        if price <= 0:
+                            continue
+                        area = 0
+                        for el in card.select("li, span, div"):
+                            m = re.search(r'(\d+(?:[.,]\d+)?)\s*m²', el.get_text())
+                            if m:
+                                area = float(m.group(1).replace(",", "."))
+                                break
+                        price_m2 = round(price / area, 0) if area > 0 else 0
+                        deal = make_deal(
+                            title=title, price=price, area=area, price_m2=price_m2,
+                            location=city_label, url=href, source="imovirtual",
+                            market=market_key,
+                        )
+                        deals.append(deal)
+                    except Exception:
+                        continue
+        except Exception as e:
+            log.error(f"[Imovirtual] Błąd strony {page}: {e}")
+            break
+        polite_delay()
+    log.info(f"[Imovirtual] -> {len(deals)} ofert")
+    return deals
+
+
+# ---------------------------------------------------------------------------
+# kyero.com scraper (Spain backup — English expat portal, less WAF)
+# ---------------------------------------------------------------------------
+KYERO_URLS = {
+    "alicante": "https://www.kyero.com/en/property-for-sale/spain/alicante",
+    "malaga":   "https://www.kyero.com/en/property-for-sale/spain/malaga",
+    "valencia": "https://www.kyero.com/en/property-for-sale/spain/valencia",
+}
+
+def scrape_kyero(market_key: str) -> list[dict]:
+    """Scrape kyero.com — English-language Spanish property portal.
+    SSR portal targeted at expat buyers, typically less anti-bot protection.
+    """
+    base_url = KYERO_URLS.get(market_key)
+    if not base_url:
+        return []
+    deals = []
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/131.0.0.0 Safari/537.36",
+        "Accept-Language": "en-GB,en;q=0.9",
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+    }
+    city_label = market_key.title()
+    for page in range(1, 3):
+        url = f"{base_url}?page={page}" if page > 1 else base_url
+        log.info(f"[Kyero] {market_key} page {page}: {url}")
+        try:
+            resp = SESSION.get(url, headers=headers, timeout=30)
+            if resp.status_code != 200:
+                log.warning(f"  Kyero HTTP {resp.status_code}")
+                break
+            html = resp.text
+            soup = BeautifulSoup(html, "html.parser")
+
+            # Try JSON-LD structured data first (common in property portals)
+            for script in soup.find_all("script", {"type": "application/ld+json"}):
+                try:
+                    ld = json.loads(script.string or "")
+                    items = ld if isinstance(ld, list) else [ld]
+                    for item in items:
+                        if item.get("@type") not in ("Product", "RealEstateListing", "Offer"):
+                            continue
+                        price_raw = (item.get("offers") or {}).get("price") or item.get("price", 0)
+                        price = float(str(price_raw).replace(",", "").replace(".", "").replace(" ", "")) if price_raw else 0
+                        if price <= 0:
+                            continue
+                        url_deal = item.get("url", "") or item.get("@id", "")
+                        title = item.get("name", f"Property in {city_label}")
+                        loc = item.get("address") or {}
+                        location = loc.get("addressLocality", city_label) if isinstance(loc, dict) else city_label
+                        deal = make_deal(
+                            title=title, price=price, area=0, price_m2=0,
+                            location=location, url=url_deal, source="kyero",
+                            market=market_key,
+                        )
+                        deals.append(deal)
+                except Exception:
+                    continue
+
+            # Fallback: parse property cards from HTML
+            if not deals:
+                cards = soup.select(
+                    "article.property-card, div.property-listing, "
+                    "li[data-listing-id], [class*='property'][class*='card']"
+                )
+                log.info(f"  Kyero HTML cards: {len(cards)}")
+                for card in cards[:30]:
+                    try:
+                        link_el = card.select_one("a[href*='/en/property']") or card.select_one("a[href]")
+                        if not link_el:
+                            continue
+                        href = link_el.get("href", "")
+                        if not href.startswith("http"):
+                            href = "https://www.kyero.com" + href
+                        title_el = card.select_one("h2, h3, .property-title, [class*='title']")
+                        title = title_el.get_text(strip=True) if title_el else f"Property in {city_label}"
+                        price_el = card.select_one("[class*='price'], .listing-price, strong")
+                        price_text = price_el.get_text(strip=True) if price_el else ""
+                        price = _parse_price(price_text)
+                        if price <= 0:
+                            continue
+                        area = 0
+                        for el in card.select("li, span, div, td"):
+                            m = re.search(r'(\d+)\s*m²', el.get_text())
+                            if m:
+                                area = float(m.group(1))
+                                break
+                        rooms = 0
+                        for el in card.select("li, span, div"):
+                            m = re.search(r'(\d+)\s*(?:bed|bedroom|hab)', el.get_text(), re.I)
+                            if m:
+                                rooms = int(m.group(1))
+                                break
+                        price_m2 = round(price / area, 0) if area > 0 else 0
+                        deal = make_deal(
+                            title=title, price=price, area=area, price_m2=price_m2,
+                            location=city_label, url=href, source="kyero",
+                            market=market_key, rooms=rooms,
+                        )
+                        deals.append(deal)
+                    except Exception:
+                        continue
+        except Exception as e:
+            log.error(f"[Kyero] Błąd strony {page}: {e}")
+            break
+        polite_delay()
+    log.info(f"[Kyero] -> {len(deals)} ofert")
+    return deals
 
 
 # ---------------------------------------------------------------------------
@@ -1308,6 +1594,10 @@ def main():
                     deals = scrape_imot(market_key)
                 elif source == "xe_gr":
                     deals = scrape_xe_gr(market_key)
+                elif source == "imovirtual":
+                    deals = scrape_imovirtual(market_key)
+                elif source == "kyero":
+                    deals = scrape_kyero(market_key)
                 else:
                     log.warning(f"Nieznane źródło: {source}")
                     continue

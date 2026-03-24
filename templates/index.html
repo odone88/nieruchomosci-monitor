@@ -184,6 +184,9 @@ body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', syste
   .filter-section { padding: 12px; }
   .toggle-row { padding: 10px 12px; }
   .search-input { width: 100%; }
+  .range-input { width: 90px; }
+  .active-filters { padding: 8px 12px; }
+  #currency-toggle { display: none; } /* hide on small mobile — too crowded */
 }
 </style>
 </head>
@@ -340,6 +343,15 @@ body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', syste
       </div>
       <div class="city-stat-row">4 460 EUR/m&#178; &middot; yield <strong style="color:var(--yellow)">5,3%</strong> centrum</div>
       <div class="city-note">Stabilny wzrost, ograniczona podaż centrum. Tańszy niż Lizbona o ~30%. STR: nowe licencje AL zamrożone w obszarach historycznych. Podatek od najmu 25% (nierezydent). Golden Visa: &#10007; nieruchomości usunięte 2024.</div>
+    </div>
+
+    <div class="city-card">
+      <div class="city-card-header">
+        <span class="city-name">&#127477;&#127481; Lizbona</span>
+        <span class="stars">&#9733;&#9733;&#9733;</span>
+      </div>
+      <div class="city-stat-row">5 800 EUR/m&#178; &middot; yield <strong style="color:var(--text2)">4,5%</strong> centrum</div>
+      <div class="city-note">Droższy niż Porto o ~30%. Silny popyt od Polaków i nomadów cyfrowych. <strong>Podatek od najmu 25%</strong> dla nierezydentów (lub 15% krótkoterminowy). STR: nowe licencje zamrożone w centrum. Golden Visa: &#10007; nieruchomości wykluczone od 2024. IVA 6% na remonty.</div>
     </div>
 
     <div class="city-card">

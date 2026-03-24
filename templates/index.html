@@ -475,6 +475,18 @@ let visibleCount = 50;
 const PAGE_SIZE = 50;
 let _scraperRunning = false;
 
+// EUR/PLN rate — fetched once from frankfurter.dev, cached
+let eurPlnRate = null;
+async function fetchEurPln() {
+  try {
+    const r = await fetch('https://api.frankfurter.dev/latest?from=EUR&to=PLN');
+    if (!r.ok) return;
+    const d = await r.json();
+    eurPlnRate = d.rates && d.rates.PLN ? d.rates.PLN : null;
+  } catch(e) { /* silent — nice-to-have, not critical */ }
+}
+fetchEurPln();
+
 // Debounce — search input fires max once per 200ms
 let _searchTimer = null;
 function debouncedFilter() {
@@ -813,6 +825,13 @@ function renderDeals(deals, totalFiltered) {
     const priceFormatted = (d.price||0).toLocaleString('pl-PL');
     const pm2Formatted = (d.price_m2||0).toLocaleString('pl-PL');
 
+    // PLN equivalent for EU deals (EUR only)
+    let plnEquiv = '';
+    if (isEu && currency === 'EUR' && eurPlnRate && d.price > 0) {
+      const plnVal = Math.round(d.price * eurPlnRate / 1000) * 1000;
+      plnEquiv = `<span style="font-size:0.8rem;color:var(--text2);margin-left:4px">≈ ${plnVal.toLocaleString('pl-PL')} PLN</span>`;
+    }
+
     const card = document.createElement('div');
     card.className = cardClass;
 
@@ -847,6 +866,7 @@ function renderDeals(deals, totalFiltered) {
           <span class="price-m2">${pm2Formatted} ${currency}/m²</span>
           ${discBadge}
         </div>
+        ${plnEquiv}
         <div class="meta-row">
           <span class="location">${(d.location||'—').replace(/</g,'&lt;')}</span>
           <span>📐 ${(d.area||0).toFixed(0)} m²</span>

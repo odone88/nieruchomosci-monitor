@@ -172,7 +172,7 @@
       "max_price_m2": 2500,
       "currency": "EUR",
       "sources": [
-        "idealista_es"
+        "pisos"
       ],
       "city_filter": [
         "Valencia",
@@ -236,14 +236,14 @@
       "max_price_m2": 3500,
       "currency": "EUR",
       "sources": [
-        "idealista_es"
+        "pisos"
       ],
       "city_filter": [
         "Alicante",
         "Alacant"
       ],
       "type": "mieszkanie",
-      "flag": "",
+      "flag": "🇪🇸",
       "roi_rating": 5,
       "roi_note": "Najwyzszy yield w Europie Zachodniej: 8,7% poza centrum. 3402 EUR/m2. Silny rynek turystyczny. ITP 10%, IRNR 19%."
     },
@@ -253,13 +253,13 @@
       "max_price_m2": 4500,
       "currency": "EUR",
       "sources": [
-        "idealista_es"
+        "pisos"
       ],
       "city_filter": [
         "Malaga"
       ],
       "type": "mieszkanie",
-      "flag": "",
+      "flag": "🇪🇸",
       "roi_rating": 4,
       "roi_note": "Najszybciej rosnace miasto Hiszpanii. Yield 7,1% poza centrum. Hub IT i nomadow. ITP 7% (Andaluzja)."
     },

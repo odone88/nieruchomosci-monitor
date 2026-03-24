@@ -725,11 +725,79 @@ def _extract_olx_html(soup: BeautifulSoup, market_key: str) -> list[dict]:
 IDEALISTA_URLS = {
     "barcelona": "https://www.idealista.com/venta-viviendas/barcelona-barcelona/",
     "lizbona": "https://www.idealista.pt/comprar-casas/lisboa/",
-    # Spain
-    "alicante": "https://www.idealista.com/venta-viviendas/alicante-alicante/",
-    "malaga":   "https://www.idealista.com/venta-viviendas/malaga-malaga/",
-    "valencia": "https://www.idealista.com/venta-viviendas/valencia-valencia/",
 }
+
+# ---------------------------------------------------------------------------
+# pisos.com scraper (Spain — Alicante, Malaga, Valencia)
+# SSR portal, 30 listings per page, no JS needed
+# ---------------------------------------------------------------------------
+PISOS_URLS = {
+    "alicante": "https://www.pisos.com/venta/pisos-alicante/",
+    "malaga":   "https://www.pisos.com/venta/pisos-malaga/",
+    "valencia": "https://www.pisos.com/venta/pisos-valencia/",
+}
+
+def scrape_pisos(market_key: str) -> list[dict]:
+    """Scrape pisos.com — confirmed SSR, 30 listings/page, data-ad-price attribute."""
+    base_url = PISOS_URLS.get(market_key)
+    if not base_url:
+        return []
+    deals = []
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/131.0.0.0 Safari/537.36",
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+        "Accept-Language": "es-ES,es;q=0.9,en;q=0.8",
+    }
+    city_name = market_key.title()
+    for page in range(1, 3):
+        url = base_url if page == 1 else f"{base_url}{page}/"
+        log.info(f"[Pisos] {market_key} page {page}: {url}")
+        resp = SESSION.get(url, headers=headers, timeout=30)
+        if resp.status_code != 200:
+            log.warning(f"  Pisos HTTP {resp.status_code}")
+            break
+        html = resp.text
+        # Each card has data-lnk-href="/comprar/..."
+        card_hrefs = re.findall(r'data-lnk-href="(/comprar/[^"]+)"', html)
+        log.info(f"  Pisos cards: {len(card_hrefs)}")
+        for href in card_hrefs:
+            try:
+                # Find the chunk for this card (7000 chars after the href)
+                pos = html.find(f'data-lnk-href="{href}"')
+                chunk = html[pos:pos + 7000]
+                # Price — data-ad-price="209000" (clean integer, EUR)
+                price_m = re.search(r'data-ad-price="(\d+)"', chunk)
+                price = float(price_m.group(1)) if price_m else 0
+                if price <= 0:
+                    continue
+                # Area — "100 m²" in ad-preview__char elements
+                chars = re.findall(r'ad-preview__char[^>]*>([^<]*(?:<[^/][^>]*>[^<]*</[^>]+>)?[^<]*)</p>', chunk)
+                area = 0
+                for c in chars:
+                    clean = re.sub(r'<[^>]+>', '', c).strip()
+                    m2 = re.search(r'(\d+)\s*m', clean)
+                    if m2:
+                        area = float(m2.group(1))
+                        break
+                # Title
+                title_m = re.search(r'class="ad-preview__title[^"]*"[^>]*>([^<]+)<', chunk)
+                title = title_m.group(1).strip() if title_m else f"Piso en {city_name}"
+                # Location
+                loc_m = re.search(r'ad-preview__subtitle[^>]*>([^<]+)<', chunk)
+                location = loc_m.group(1).strip() if loc_m else city_name
+                price_m2 = round(price / area, 0) if area > 0 else 0
+                full_url = "https://www.pisos.com" + href
+                deal = make_deal(
+                    title=title, price=price, area=area, price_m2=price_m2,
+                    location=location, url=full_url,
+                    source="pisos", market=market_key,
+                )
+                deals.append(deal)
+            except Exception:
+                continue
+        polite_delay()
+    log.info(f"[Pisos] -> {len(deals)} ofert")
+    return deals
 
 
 def scrape_idealista(market_key: str) -> list[dict]:
@@ -1230,6 +1298,8 @@ def main():
                     deals = scrape_otodom(market_key)
                 elif source == "olx":
                     deals = scrape_olx(market_key)
+                elif source == "pisos":
+                    deals = scrape_pisos(market_key)
                 elif source in ("idealista", "idealista_es", "idealista_pt"):
                     deals = scrape_idealista(market_key)
                 elif source in ("imobiliare", "storia_ro"):

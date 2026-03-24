@@ -212,6 +212,17 @@ body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', syste
     <button class="tab" data-market="gdansk" onclick="setMarket('gdansk',this)" id="tab-gdansk">⚓ Gdańsk</button>
     <button class="tab" data-market="europa" onclick="setMarket('europa',this)" id="tab-europa">🌍 Europa</button>
   </div>
+  <!-- EU city sub-tabs — visible only when Europa is selected -->
+  <div class="filter-row" id="eu-city-row" style="display:none">
+    <span class="filter-label">Kraj/Miasto</span>
+    <button class="tab active" data-eumarket="all" onclick="setEuMarket('all',this)">Wszystkie EU</button>
+    <button class="tab" data-eumarket="alicante" onclick="setEuMarket('alicante',this)">🇪🇸 Alicante</button>
+    <button class="tab" data-eumarket="malaga" onclick="setEuMarket('malaga',this)">🇪🇸 Málaga</button>
+    <button class="tab" data-eumarket="valencia" onclick="setEuMarket('valencia',this)">🇪🇸 Valencia</button>
+    <button class="tab" data-eumarket="bucharest" onclick="setEuMarket('bucharest',this)">🇷🇴 Bukareszt</button>
+    <button class="tab" data-eumarket="sofia" onclick="setEuMarket('sofia',this)">🇧🇬 Sofia</button>
+    <button class="tab" data-eumarket="athens" onclick="setEuMarket('athens',this)">🇬🇷 Ateny</button>
+  </div>
   <div class="filter-row">
     <span class="filter-label">Typ</span>
     <button class="tab active" data-type="all" onclick="setType('all',this)">Wszystkie</button>
@@ -421,8 +432,9 @@ let markets = {};
 let currentMarket = 'all';
 let currentType = 'all';
 let currentDiscount = 0;
-let visibleCount = 50;   // cards currently rendered
-const PAGE_SIZE = 50;    // how many to add per "load more"
+let currentEuMarket = 'all';
+let visibleCount = 50;
+const PAGE_SIZE = 50;
 
 // Debounce — search input fires max once per 200ms
 let _searchTimer = null;
@@ -550,6 +562,24 @@ function setMarket(m, el) {
   currentMarket = m;
   document.querySelectorAll('[data-market]').forEach(b => b.classList.remove('active'));
   el.classList.add('active');
+  // Show/hide EU sub-tabs
+  const euRow = document.getElementById('eu-city-row');
+  if (m === 'europa') {
+    euRow.style.display = 'flex';
+  } else {
+    euRow.style.display = 'none';
+    currentEuMarket = 'all';
+    document.querySelectorAll('[data-eumarket]').forEach(b => b.classList.remove('active'));
+    document.querySelector('[data-eumarket="all"]').classList.add('active');
+  }
+  visibleCount = PAGE_SIZE;
+  filterDeals();
+}
+
+function setEuMarket(m, el) {
+  currentEuMarket = m;
+  document.querySelectorAll('[data-eumarket]').forEach(b => b.classList.remove('active'));
+  el.classList.add('active');
   visibleCount = PAGE_SIZE;
   filterDeals();
 }
@@ -576,10 +606,14 @@ function filterDeals() {
   const sort = document.getElementById('sort-select').value;
   const interestingOnly = document.getElementById('interesting-toggle').checked;
 
-  // Market filter — uses MARKET_GROUPS to map city tab to market keys
+  // Market filter
   if (currentMarket !== 'all') {
     const group = MARKET_GROUPS[currentMarket] || [];
     deals = deals.filter(d => group.includes(d.market));
+  }
+  // EU sub-market filter
+  if (currentEuMarket !== 'all') {
+    deals = deals.filter(d => d.market === currentEuMarket);
   }
 
   // Type filter — uses the `type` field returned from API (from config)
@@ -656,6 +690,10 @@ function renderDeals(deals, totalFiltered) {
     const currency = (markets[d.market]||{}).currency || 'PLN';
     const flag = d.market_flag || '';
     const marketLabel = d.market_label || d.market;
+    const isEu = MARKET_GROUPS.europa.includes(d.market);
+    const cityBadge = isEu
+      ? `<div style="font-size:0.78rem;font-weight:700;color:var(--blue);margin-bottom:4px;letter-spacing:0.02em">${flag} ${marketLabel} · ${(d.location||'').split(',')[0]}</div>`
+      : '';
 
     const priceFormatted = (d.price||0).toLocaleString('pl-PL');
     const pm2Formatted = (d.price_m2||0).toLocaleString('pl-PL');
@@ -687,6 +725,7 @@ function renderDeals(deals, totalFiltered) {
         <span class="badge-type">${flag} ${marketLabel}</span>
       </div>
       <div class="card-body">
+        ${cityBadge}
         <div class="card-title"><a href="${safeUrl}" target="_blank" rel="noopener">${safeTitle.substring(0,90)}</a></div>
         <div class="price-row">
           <span class="price">${priceFormatted} ${currency}</span>

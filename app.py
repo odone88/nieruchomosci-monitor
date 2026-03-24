@@ -113,6 +113,8 @@ def api_deals():
         d["market_label"] = mk_cfg.get("label", mk)
         d["market_flag"] = mk_cfg.get("flag", "")
         d["type"] = mk_cfg.get("type", "")
+        d["gross_yield_pct"] = mk_cfg.get("gross_yield_pct", 0)
+        d["avg_price_m2"] = mk_cfg.get("avg_price_m2", 0)
 
     # Server-side filters
     if market and market != "all":

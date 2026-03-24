@@ -1000,10 +1000,11 @@ def scrape_storia(market_key: str) -> list[dict]:
                     price_m2 = round(price / area, 0) if area > 0 else 0
                     img_list = item.get("images") or []
                     image_url = img_list[0].get("medium") if img_list and isinstance(img_list[0], dict) else ""
+                    rooms = int(item.get("roomsNumber") or item.get("rooms", 0) or 0)
                     deal = make_deal(
                         title=title, price=price, area=area, price_m2=price_m2,
                         location=city, url=url_deal, source="storia",
-                        market=market_key, image_url=image_url or "",
+                        market=market_key, image_url=image_url or "", rooms=rooms,
                     )
                     deals.append(deal)
                 except Exception:

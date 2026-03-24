@@ -180,6 +180,35 @@ def api_status():
     return jsonify(info)
 
 
+@app.route("/api/test-pisos")
+def api_test_pisos():
+    """Debug: test pisos.com connectivity from Render's IP."""
+    import requests
+    url = "https://www.pisos.com/venta/pisos-alicante/"
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+        "Accept-Language": "es-ES,es;q=0.9,en;q=0.8",
+    }
+    try:
+        r = requests.get(url, headers=headers, timeout=15)
+        html = r.text
+        import re
+        cards = re.findall(r'data-lnk-href="(/comprar/[^"]+)"', html)
+        prices = re.findall(r'data-ad-price="(\d+)"', html)
+        return jsonify({
+            "status_code": r.status_code,
+            "cards_found": len(cards),
+            "prices_found": len(prices),
+            "html_length": len(html),
+            "first_500": html[:500],
+            "sample_card": cards[0] if cards else None,
+            "sample_prices": prices[:3] if prices else [],
+        })
+    except Exception as e:
+        return jsonify({"error": str(e)})
+
+
 @app.route("/api/stats")
 def api_stats():
     if not DEALS_JSON.exists():
